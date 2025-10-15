@@ -68,6 +68,7 @@ export const EmojiPicker: React.FC<EmojiPickerProps> = ({ onEmojiSelect, disable
             {categories.map((category) => (
               <button
                 key={category}
+                type="button"
                 onClick={() => setSelectedCategory(category)}
                 className={`px-3 py-2 text-xs font-medium transition-colors ${
                   selectedCategory === category
@@ -86,6 +87,7 @@ export const EmojiPicker: React.FC<EmojiPickerProps> = ({ onEmojiSelect, disable
               {EMOJI_CATEGORIES[selectedCategory].map((emoji, index) => (
                 <button
                   key={`${selectedCategory}-${index}`}
+                  type="button"
                   onClick={() => handleEmojiClick(emoji)}
                   className="w-8 h-8 flex items-center justify-center text-lg hover:bg-gray-100 rounded transition-colors"
                   title={emoji}

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { EmojiPicker } from '@/components/ui/EmojiPicker';
@@ -14,6 +14,7 @@ interface MessageInputProps {
   disabled?: boolean;
   replyingTo?: Message | null;
   onCancelReply?: () => void;
+  enableGlobalTyping?: boolean;
 }
 
 export const MessageInput: React.FC<MessageInputProps> = ({
@@ -24,10 +25,12 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   disabled = false,
   replyingTo,
   onCancelReply,
+  enableGlobalTyping = false,
 }) => {
   const [message, setMessage] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,6 +47,39 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   const handleVoiceMessage = (audioBlob: Blob) => {
     onSendVoiceMessage(audioBlob, replyingTo || undefined);
   };
+
+  // Global keyboard event listener for typing in chat
+  useEffect(() => {
+    if (!enableGlobalTyping) return;
+
+    const handleGlobalKeyDown = (event: KeyboardEvent) => {
+      // Only handle if we're not already focused on an input/textarea
+      const activeElement = document.activeElement;
+      const isInputFocused = activeElement?.tagName === 'INPUT' || 
+                           activeElement?.tagName === 'TEXTAREA' ||
+                           (activeElement as HTMLElement)?.contentEditable === 'true';
+
+      // Don't interfere if user is typing in other inputs
+      if (isInputFocused) return;
+
+      // Don't handle special keys or shortcuts
+      if (event.ctrlKey || event.metaKey || event.altKey) return;
+
+      // Don't handle function keys, arrows, etc.
+      if (event.key.length > 1 && !['Backspace', 'Delete', 'Enter'].includes(event.key)) return;
+
+      // Focus the input and let the key event propagate
+      if (inputRef.current) {
+        inputRef.current.focus();
+        // Let the natural input handling take over
+      }
+    };
+
+    document.addEventListener('keydown', handleGlobalKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleGlobalKeyDown);
+    };
+  }, [enableGlobalTyping]);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -120,6 +156,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
         <VoiceRecorder onSendVoiceMessage={handleVoiceMessage} disabled={disabled} />
         <div className="flex-1 min-w-0">
           <Input
+            ref={inputRef}
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             placeholder="Type a message..."

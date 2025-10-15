@@ -137,6 +137,7 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
           className="hidden"
         />
         <Button
+          type="button"
           onClick={playRecording}
           variant="outline"
           size="sm"
@@ -148,6 +149,7 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
           Voice message ({formatTime(Math.floor(audioBlob.size / 1000))})
         </div>
         <Button
+          type="button"
           onClick={deleteRecording}
           variant="outline"
           size="sm"
@@ -156,6 +158,7 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
           <Trash2 size={16} />
         </Button>
         <Button
+          type="button"
           onClick={sendRecording}
           size="sm"
           className="bg-green-600 hover:bg-green-700"
@@ -175,6 +178,7 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
             <span className="text-sm font-medium">{formatTime(recordingTime)}</span>
           </div>
           <Button
+            type="button"
             onClick={stopRecording}
             variant="outline"
             size="sm"
@@ -185,6 +189,7 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
         </div>
       ) : (
         <Button
+          type="button"
           onClick={startRecording}
           disabled={disabled}
           variant="outline"

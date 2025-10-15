@@ -213,6 +213,7 @@ export const ChatWindow: React.FC = () => {
           disabled={false}
           replyingTo={replyingTo}
           onCancelReply={handleCancelReply}
+          enableGlobalTyping={!!selectedUserId}
         />
       </div>
 
