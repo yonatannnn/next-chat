@@ -16,7 +16,7 @@ import { db } from '@/lib/firebase';
 import { Message } from '../store/chatStore';
 
 export const chatService = {
-  async sendMessage(senderId: string, receiverId: string, text: string, fileUrl?: string, fileUrls?: string[]) {
+  async sendMessage(senderId: string, receiverId: string, text: string, fileUrl?: string, fileUrls?: string[], replyTo?: any) {
     if (!db) {
       throw new Error('Firebase not initialized');
     }
@@ -29,6 +29,11 @@ export const chatService = {
         fileUrl: fileUrl || null,
         fileUrls: fileUrls || null,
         timestamp: serverTimestamp(),
+        replyTo: replyTo ? {
+          messageId: replyTo.id,
+          text: replyTo.text,
+          senderName: replyTo.senderId === senderId ? 'You' : 'Other'
+        } : null,
       };
       
       await addDoc(collection(db, 'messages'), messageData);
@@ -68,6 +73,7 @@ export const chatService = {
           edited: data.edited || false,
           editedAt: data.editedAt?.toDate(),
           deleted: data.deleted || false,
+          replyTo: data.replyTo || null,
         };
       });
       callback(messages);
@@ -100,6 +106,7 @@ export const chatService = {
           edited: data.edited || false,
           editedAt: data.editedAt?.toDate(),
           deleted: data.deleted || false,
+          replyTo: data.replyTo || null,
         };
       });
       

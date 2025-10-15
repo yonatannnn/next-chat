@@ -1,13 +1,17 @@
 import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { Paperclip, Send } from 'lucide-react';
+import { EmojiPicker } from '@/components/ui/EmojiPicker';
+import { Paperclip, Send, X } from 'lucide-react';
+import { Message } from '@/features/chat/store/chatStore';
 
 interface MessageInputProps {
-  onSendMessage: (text: string, fileUrl?: string, fileUrls?: string[]) => void;
+  onSendMessage: (text: string, fileUrl?: string, fileUrls?: string[], replyTo?: Message) => void;
   onFileUpload: (file: File) => Promise<string>;
   onMultipleFileUpload: (files: File[]) => Promise<string[]>;
   disabled?: boolean;
+  replyingTo?: Message | null;
+  onCancelReply?: () => void;
 }
 
 export const MessageInput: React.FC<MessageInputProps> = ({
@@ -15,6 +19,8 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   onFileUpload,
   onMultipleFileUpload,
   disabled = false,
+  replyingTo,
+  onCancelReply,
 }) => {
   const [message, setMessage] = useState('');
   const [isUploading, setIsUploading] = useState(false);
@@ -24,8 +30,12 @@ export const MessageInput: React.FC<MessageInputProps> = ({
     e.preventDefault();
     if (!message.trim() || disabled) return;
 
-    onSendMessage(message.trim());
+    onSendMessage(message.trim(), undefined, undefined, replyingTo || undefined);
     setMessage('');
+  };
+
+  const handleEmojiSelect = (emoji: string) => {
+    setMessage(prev => prev + emoji);
   };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -55,6 +65,32 @@ export const MessageInput: React.FC<MessageInputProps> = ({
 
   return (
     <div className="border-t border-gray-200 p-3 md:p-4">
+      {/* Reply preview */}
+      {replyingTo && (
+        <div className="mb-3 p-3 bg-gray-50 border-l-4 border-blue-500 rounded-r-lg">
+          <div className="flex items-center justify-between">
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-medium text-gray-700 mb-1">
+                Replying to {replyingTo.senderId}
+              </div>
+              <div className="text-sm text-gray-600 truncate">
+                {replyingTo.text.length > 100 
+                  ? `${replyingTo.text.substring(0, 100)}...` 
+                  : replyingTo.text}
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={onCancelReply}
+              className="ml-2 p-1 text-gray-400 hover:text-gray-600 transition-colors"
+              title="Cancel reply"
+            >
+              <X size={16} />
+            </button>
+          </div>
+        </div>
+      )}
+      
       <form onSubmit={handleSubmit} className="flex items-center space-x-2">
         <input
           ref={fileInputRef}
@@ -73,6 +109,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
         >
           <Paperclip size={18} className="md:w-5 md:h-5" />
         </button>
+        <EmojiPicker onEmojiSelect={handleEmojiSelect} disabled={disabled} />
         <div className="flex-1 min-w-0">
           <Input
             value={message}

@@ -14,7 +14,7 @@ import { Trash2, Info } from 'lucide-react';
 
 export const ChatWindow: React.FC = () => {
   const router = useRouter();
-  const { selectedUserId, messages, conversations, setSelectedUserId } = useChatStore();
+  const { selectedUserId, messages, conversations, setSelectedUserId, replyingTo, setReplyingTo } = useChatStore();
   const { userData } = useAuthStore();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { markAsRead, markAsSeen } = useConversations(userData?.id || '');
@@ -38,9 +38,10 @@ export const ChatWindow: React.FC = () => {
     }
   }, [selectedUserId, conversations, markAsSeen]);
 
-  const handleSendMessage = async (text: string, fileUrl?: string, fileUrls?: string[]) => {
+  const handleSendMessage = async (text: string, fileUrl?: string, fileUrls?: string[], replyTo?: any) => {
     if (!selectedUserId) return;
-    await sendMessage(text, fileUrl, fileUrls);
+    await sendMessage(text, fileUrl, fileUrls, replyTo);
+    setReplyingTo(null); // Clear reply state after sending
   };
 
   const handleFileUpload = async (file: File): Promise<string> => {
@@ -88,6 +89,14 @@ export const ChatWindow: React.FC = () => {
 
   const handleChatInfo = () => {
     setIsChatInfoOpen(true);
+  };
+
+  const handleReply = (message: any) => {
+    setReplyingTo(message);
+  };
+
+  const handleCancelReply = () => {
+    setReplyingTo(null);
   };
 
   const dropdownItems = [
@@ -159,6 +168,7 @@ export const ChatWindow: React.FC = () => {
             senderAvatar={message.senderId === userData?.id ? userData?.avatar : selectedUser?.avatar}
             onEdit={editMessage}
             onDelete={deleteMessage}
+            onReply={handleReply}
           />
         ))}
         <div ref={messagesEndRef} />
@@ -171,6 +181,8 @@ export const ChatWindow: React.FC = () => {
           onFileUpload={handleFileUpload}
           onMultipleFileUpload={handleMultipleFileUpload}
           disabled={false}
+          replyingTo={replyingTo}
+          onCancelReply={handleCancelReply}
         />
       </div>
 

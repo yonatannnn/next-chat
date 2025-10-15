@@ -36,11 +36,11 @@ export const useChat = (currentUserId: string, selectedUserId: string | null) =>
     return () => unsubscribe();
   }, [currentUserId, selectedUserId, setMessages, setLoading]);
 
-  const sendMessage = async (text: string, fileUrl?: string, fileUrls?: string[]) => {
+  const sendMessage = async (text: string, fileUrl?: string, fileUrls?: string[], replyTo?: any) => {
     if (!selectedUserId) return;
     
     try {
-      await chatService.sendMessage(currentUserId, selectedUserId, text, fileUrl, fileUrls);
+      await chatService.sendMessage(currentUserId, selectedUserId, text, fileUrl, fileUrls, replyTo);
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : 'An error occurred');
     }

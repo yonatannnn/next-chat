@@ -3,7 +3,7 @@ import Image from 'next/image';
 import { Avatar } from '@/components/ui/Avatar';
 import { ImageViewer } from '@/components/ui/ImageViewer';
 import { Message } from '@/features/chat/store/chatStore';
-import { Edit2, Trash2, Check, X } from 'lucide-react';
+import { Edit2, Trash2, Check, X, Reply } from 'lucide-react';
 
 interface MessageBubbleProps {
   message: Message;
@@ -12,6 +12,7 @@ interface MessageBubbleProps {
   senderAvatar?: string;
   onEdit?: (messageId: string, newText: string) => void;
   onDelete?: (messageId: string) => void;
+  onReply?: (message: Message) => void;
 }
 
 export const MessageBubble: React.FC<MessageBubbleProps> = ({
@@ -21,6 +22,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   senderAvatar,
   onEdit,
   onDelete,
+  onReply,
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(message.text);
@@ -51,6 +53,12 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
     }
   };
 
+  const handleReply = () => {
+    if (onReply) {
+      onReply(message);
+    }
+  };
+
   return (
     <div className={`flex ${isOwn ? 'justify-end' : 'justify-start'} mb-3 md:mb-4`}>
       <div className={`flex max-w-[85%] sm:max-w-xs lg:max-w-md ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}>
@@ -73,6 +81,23 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                 : 'bg-gray-100 text-gray-900'
             }`}
           >
+            {/* Reply context */}
+            {message.replyTo && (
+              <div className={`mb-2 p-2 rounded border-l-2 ${
+                isOwn 
+                  ? 'bg-blue-500 bg-opacity-20 border-blue-400' 
+                  : 'bg-gray-200 border-gray-400'
+              }`}>
+                <div className="text-xs opacity-75 mb-1">
+                  Replying to {message.replyTo.senderName}
+                </div>
+                <div className="text-xs truncate">
+                  {message.replyTo.text.length > 50 
+                    ? `${message.replyTo.text.substring(0, 50)}...` 
+                    : message.replyTo.text}
+                </div>
+              </div>
+            )}
             {!message.deleted && (message.fileUrl || message.fileUrls) && (
               <div className="mb-2">
                 {message.fileUrls && message.fileUrls.length > 0 ? (
@@ -179,24 +204,37 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
               </div>
             )}
 
-            {/* Edit/Delete buttons - only show for own messages and when not deleted */}
-            {isOwn && !message.deleted && !isEditing && (
+            {/* Action buttons */}
+            {!message.deleted && !isEditing && (
               <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
                 <div className="flex space-x-1">
-                  <button
-                    onClick={() => setIsEditing(true)}
-                    className="p-1 bg-blue-500 text-white rounded hover:bg-blue-600"
-                    title="Edit message"
-                  >
-                    <Edit2 size={14} />
-                  </button>
-                  <button
-                    onClick={handleDelete}
-                    className="p-1 bg-red-500 text-white rounded hover:bg-red-600"
-                    title="Delete message"
-                  >
-                    <Trash2 size={14} />
-                  </button>
+                  {onReply && (
+                    <button
+                      onClick={handleReply}
+                      className="p-1 bg-green-500 text-white rounded hover:bg-green-600"
+                      title="Reply to message"
+                    >
+                      <Reply size={14} />
+                    </button>
+                  )}
+                  {isOwn && (
+                    <>
+                      <button
+                        onClick={() => setIsEditing(true)}
+                        className="p-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+                        title="Edit message"
+                      >
+                        <Edit2 size={14} />
+                      </button>
+                      <button
+                        onClick={handleDelete}
+                        className="p-1 bg-red-500 text-white rounded hover:bg-red-600"
+                        title="Delete message"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             )}

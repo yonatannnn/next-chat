@@ -11,6 +11,11 @@ export interface Message {
   edited?: boolean;
   editedAt?: Date;
   deleted?: boolean;
+  replyTo?: {
+    messageId: string;
+    text: string;
+    senderName: string;
+  } | null;
 }
 
 export interface Conversation {
@@ -32,6 +37,7 @@ interface ChatState {
   isLoading: boolean;
   error: string | null;
   searchQuery: string;
+  replyingTo: Message | null;
   setMessages: (messages: Message[]) => void;
   addMessage: (message: Message) => void;
   updateMessage: (messageId: string, updates: Partial<Message>) => void;
@@ -47,6 +53,7 @@ interface ChatState {
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   clearMessages: () => void;
+  setReplyingTo: (message: Message | null) => void;
 }
 
 export const useChatStore = create<ChatState>((set) => ({
@@ -56,6 +63,7 @@ export const useChatStore = create<ChatState>((set) => ({
   isLoading: false,
   error: null,
   searchQuery: '',
+  replyingTo: null,
   setMessages: (messages) => set({ messages }),
   addMessage: (message) => set((state) => ({ 
     messages: [...state.messages, message] 
@@ -121,4 +129,5 @@ export const useChatStore = create<ChatState>((set) => ({
   setLoading: (isLoading) => set({ isLoading }),
   setError: (error) => set({ error }),
   clearMessages: () => set({ messages: [] }),
+  setReplyingTo: (replyingTo) => set({ replyingTo }),
 }));
