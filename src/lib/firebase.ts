@@ -16,16 +16,37 @@ let app: FirebaseApp | undefined;
 let auth: Auth | undefined;
 let db: Firestore | undefined;
 
-if (typeof window !== 'undefined' && firebaseConfig.apiKey) {
-  // Only initialize on client side and if config is available
-  if (getApps().length === 0) {
-    app = initializeApp(firebaseConfig);
-  } else {
-    app = getApps()[0];
+// Check if all required Firebase config values are present
+const isFirebaseConfigValid = firebaseConfig.apiKey && 
+  firebaseConfig.authDomain && 
+  firebaseConfig.projectId && 
+  firebaseConfig.storageBucket && 
+  firebaseConfig.messagingSenderId && 
+  firebaseConfig.appId;
+
+if (typeof window !== 'undefined' && isFirebaseConfigValid) {
+  try {
+    // Only initialize on client side and if config is available
+    if (getApps().length === 0) {
+      app = initializeApp(firebaseConfig);
+    } else {
+      app = getApps()[0];
+    }
+    
+    auth = getAuth(app);
+    db = getFirestore(app);
+  } catch (error) {
+    console.error('Firebase initialization error:', error);
   }
-  
-  auth = getAuth(app);
-  db = getFirestore(app);
+} else if (typeof window !== 'undefined') {
+  console.warn('Firebase configuration is incomplete. Missing environment variables:', {
+    apiKey: !!firebaseConfig.apiKey,
+    authDomain: !!firebaseConfig.authDomain,
+    projectId: !!firebaseConfig.projectId,
+    storageBucket: !!firebaseConfig.storageBucket,
+    messagingSenderId: !!firebaseConfig.messagingSenderId,
+    appId: !!firebaseConfig.appId
+  });
 }
 
 export { auth, db };
