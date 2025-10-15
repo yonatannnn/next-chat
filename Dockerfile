@@ -1,29 +1,26 @@
-# Use the official Node.js 20 image
+# Use official Node.js 20 image
 FROM node:20-alpine
 
 # Set working directory
 WORKDIR /app
 
-# Copy package files
+# Copy package files first (for better caching)
 COPY package*.json ./
 
-# Remove package-lock.json to avoid conflicts and install fresh
-RUN rm -f package-lock.json
-
-# Install ALL dependencies (including devDependencies for build)
+# Install dependencies
 RUN npm install
 
-# Copy source code
+# Copy all source code
 COPY . .
 
-# Build the application
+# Build Next.js app
 RUN npm run build
 
-# Remove devDependencies after build
+# Remove devDependencies to reduce image size
 RUN npm prune --production
 
-# Expose port
+# Expose the Next.js port
 EXPOSE 3000
 
-# Start the application
+# Start the app
 CMD ["npm", "start"]
