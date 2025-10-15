@@ -15,6 +15,10 @@ import { Message } from '../store/chatStore';
 
 export const chatService = {
   async sendMessage(senderId: string, receiverId: string, text: string, fileUrl?: string, fileUrls?: string[]) {
+    if (!db) {
+      throw new Error('Firebase not initialized');
+    }
+    
     try {
       const messageData = {
         senderId,
@@ -36,6 +40,10 @@ export const chatService = {
   },
 
   subscribeToMessages(currentUserId: string, otherUserId: string, callback: (messages: Message[]) => void) {
+    if (!db) {
+      throw new Error('Firebase not initialized');
+    }
+    
     const messagesRef = collection(db, 'messages');
     const q = query(
       messagesRef,
@@ -65,6 +73,10 @@ export const chatService = {
   },
 
   async editMessage(messageId: string, newText: string) {
+    if (!db) {
+      throw new Error('Firebase not initialized');
+    }
+    
     try {
       const messageRef = doc(db, 'messages', messageId);
       await updateDoc(messageRef, {
@@ -81,6 +93,10 @@ export const chatService = {
   },
 
   async deleteMessage(messageId: string) {
+    if (!db) {
+      throw new Error('Firebase not initialized');
+    }
+    
     try {
       const messageRef = doc(db, 'messages', messageId);
       await updateDoc(messageRef, {
