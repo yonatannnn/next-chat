@@ -5,8 +5,8 @@ export interface Message {
   senderId: string;
   receiverId: string;
   text: string;
-  fileUrl?: string;
-  fileUrls?: string[]; // For multiple images
+  fileUrl?: string | null;
+  fileUrls?: string[] | null; // For multiple images
   timestamp: Date;
   edited?: boolean;
   editedAt?: Date;
@@ -36,6 +36,7 @@ interface ChatState {
   addMessage: (message: Message) => void;
   updateMessage: (messageId: string, updates: Partial<Message>) => void;
   deleteMessage: (messageId: string) => void;
+  deleteAllMessages: (userId1: string, userId2: string) => void;
   setConversations: (conversations: Conversation[]) => void;
   updateConversation: (userId: string, updates: Partial<Conversation>) => void;
   markAsRead: (userId: string) => void;
@@ -65,7 +66,13 @@ export const useChatStore = create<ChatState>((set) => ({
   })),
   deleteMessage: (messageId) => set((state) => ({
     messages: state.messages.map(msg => 
-      msg.id === messageId ? { ...msg, deleted: true } : msg
+      msg.id === messageId ? { ...msg, deleted: true, text: 'This message was deleted', fileUrl: null, fileUrls: null } : msg
+    )
+  })),
+  deleteAllMessages: (userId1, userId2) => set((state) => ({
+    messages: [],
+    conversations: state.conversations.filter(conv => 
+      conv.userId !== userId1 && conv.userId !== userId2
     )
   })),
   setConversations: (conversations) => set({ conversations }),

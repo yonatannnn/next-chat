@@ -8,6 +8,7 @@ export const useChat = (currentUserId: string, selectedUserId: string | null) =>
     setMessages, 
     updateMessage,
     deleteMessage,
+    deleteAllMessages,
     setLoading, 
     setError 
   } = useChatStore();
@@ -112,10 +113,27 @@ export const useChat = (currentUserId: string, selectedUserId: string | null) =>
     }
   };
 
+  const handleDeleteAllMessages = async (userId1: string, userId2: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      // Optimistic update first
+      deleteAllMessages(userId1, userId2);
+      
+      // Delete from database
+      await chatService.deleteAllMessages(userId1, userId2);
+    } catch (error: unknown) {
+      setError(error instanceof Error ? error.message : 'An error occurred');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return {
     messages,
     sendMessage,
     editMessage,
     deleteMessage: handleDeleteMessage,
+    deleteAllMessages: handleDeleteAllMessages,
   };
 };

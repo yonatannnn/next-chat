@@ -21,6 +21,7 @@ export default function ChatPage() {
 
   useEffect(() => {
     if (!isLoading && !user) {
+      console.log('Redirecting to login - user:', user, 'isLoading:', isLoading);
       router.push('/login');
     }
   }, [user, isLoading, router]);
@@ -35,6 +36,19 @@ export default function ChatPage() {
       }
     }
   }, [selectedUserId]);
+
+  // Handle browser back button on mobile
+  useEffect(() => {
+    const handlePopState = () => {
+      if (window.innerWidth < 768 && selectedUserId) {
+        setSelectedUserId(null);
+        setIsSidebarOpen(true);
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [selectedUserId, setSelectedUserId]);
 
   if (isLoading) {
     return (
@@ -59,7 +73,10 @@ export default function ChatPage() {
           // Chat mode: Show back button and user info
           <>
             <button
-              onClick={() => {
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('Back button clicked - current user:', user, 'selectedUserId:', selectedUserId);
                 setSelectedUserId(null);
                 setIsSidebarOpen(true);
               }}

@@ -8,7 +8,8 @@ import {
   updateDoc,
   deleteDoc,
   doc,
-  serverTimestamp
+  serverTimestamp,
+  getDocs
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Message } from '../store/chatStore';
@@ -104,6 +105,51 @@ export const chatService = {
         text: 'This message was deleted',
         fileUrl: null,
       });
+    } catch (error: unknown) {
+      if (error instanceof Error && error.message.includes('resource-exhausted')) {
+        throw new Error('Service temporarily unavailable. Please try again later.');
+      }
+      throw new Error(error instanceof Error ? error.message : 'An error occurred');
+    }
+  },
+
+  async deleteAllMessages(userId1: string, userId2: string) {
+    if (!db) {
+      throw new Error('Firebase not initialized');
+    }
+    
+    try {
+      // Get all messages between the two users
+      const messagesRef = collection(db, 'messages');
+      const q1 = query(
+        messagesRef,
+        where('senderId', '==', userId1),
+        where('receiverId', '==', userId2)
+      );
+      const q2 = query(
+        messagesRef,
+        where('senderId', '==', userId2),
+        where('receiverId', '==', userId1)
+      );
+
+      // Execute both queries
+      const [snapshot1, snapshot2] = await Promise.all([
+        getDocs(q1),
+        getDocs(q2)
+      ]);
+
+      // Collect all message IDs to delete
+      const messageIds: string[] = [];
+      snapshot1.docs.forEach(doc => messageIds.push(doc.id));
+      snapshot2.docs.forEach(doc => messageIds.push(doc.id));
+
+      // Delete all messages in batch
+      const deletePromises = messageIds.map(messageId => {
+        const messageRef = doc(db!, 'messages', messageId);
+        return deleteDoc(messageRef);
+      });
+
+      await Promise.all(deletePromises);
     } catch (error: unknown) {
       if (error instanceof Error && error.message.includes('resource-exhausted')) {
         throw new Error('Service temporarily unavailable. Please try again later.');

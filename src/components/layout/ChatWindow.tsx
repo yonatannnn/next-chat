@@ -20,7 +20,7 @@ export const ChatWindow: React.FC = () => {
   const { markAsRead, markAsSeen } = useConversations(userData?.id || '');
   const [isChatInfoOpen, setIsChatInfoOpen] = useState(false);
 
-  const { sendMessage, editMessage, deleteMessage } = useChat(userData?.id || '', selectedUserId);
+  const { sendMessage, editMessage, deleteMessage, deleteAllMessages } = useChat(userData?.id || '', selectedUserId);
 
   const selectedUser = conversations.find(user => user.userId === selectedUserId);
 
@@ -72,12 +72,17 @@ export const ChatWindow: React.FC = () => {
     return Promise.all(uploadPromises);
   };
 
-  const handleDeleteChat = () => {
-    if (selectedUserId && window.confirm('Are you sure you want to delete this chat? This action cannot be undone.')) {
-      // Clear the selected user and messages
-      setSelectedUserId(null);
-      // Note: In a real app, you might want to delete messages from the database
-      console.log('Chat deleted for user:', selectedUserId);
+  const handleDeleteChat = async () => {
+    if (selectedUserId && userData?.id && window.confirm('Are you sure you want to delete this chat? This action cannot be undone.')) {
+      try {
+        // Delete all messages between the two users
+        await deleteAllMessages(userData.id, selectedUserId);
+        // Clear the selected user
+        setSelectedUserId(null);
+      } catch (error) {
+        console.error('Error deleting chat:', error);
+        // You might want to show an error message to the user here
+      }
     }
   };
 
