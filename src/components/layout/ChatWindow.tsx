@@ -117,9 +117,9 @@ export const ChatWindow: React.FC = () => {
   }
 
   return (
-    <div className="flex-1 flex flex-col bg-white">
-      {/* Chat Header */}
-      <div className="border-b border-gray-200 p-3 md:p-4">
+    <div className="flex-1 flex flex-col bg-white h-full">
+      {/* Chat Header - Fixed */}
+      <div className="flex-shrink-0 border-b border-gray-200 p-3 md:p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2 md:space-x-3 min-w-0 flex-1">
             <button
@@ -143,8 +143,8 @@ export const ChatWindow: React.FC = () => {
         </div>
       </div>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-3 md:p-4 space-y-3 md:space-y-4">
+      {/* Messages - Scrollable */}
+      <div className="flex-1 overflow-y-auto min-h-0 p-3 md:p-4 space-y-3 md:space-y-4">
         {messages.map((message) => (
           <MessageBubble
             key={message.id}
@@ -159,13 +159,15 @@ export const ChatWindow: React.FC = () => {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Message Input */}
-      <MessageInput
-        onSendMessage={handleSendMessage}
-        onFileUpload={handleFileUpload}
-        onMultipleFileUpload={handleMultipleFileUpload}
-        disabled={false}
-      />
+      {/* Message Input - Fixed */}
+      <div className="flex-shrink-0">
+        <MessageInput
+          onSendMessage={handleSendMessage}
+          onFileUpload={handleFileUpload}
+          onMultipleFileUpload={handleMultipleFileUpload}
+          disabled={false}
+        />
+      </div>
 
       {/* Chat Info Modal */}
       {selectedUser && (

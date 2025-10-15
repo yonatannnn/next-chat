@@ -57,8 +57,8 @@ export const Sidebar: React.FC = () => {
 
   return (
     <div className="w-full bg-white border-r border-gray-200 flex flex-col h-full">
-      {/* Header */}
-      <div className="p-3 md:p-4 border-b border-gray-200">
+      {/* Header - Fixed */}
+      <div className="flex-shrink-0 p-3 md:p-4 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3 min-w-0 flex-1">
               <Avatar
@@ -89,8 +89,8 @@ export const Sidebar: React.FC = () => {
           </div>
       </div>
 
-      {/* Search */}
-      <div className="p-3 md:p-4 border-b border-gray-200">
+      {/* Search - Fixed */}
+      <div className="flex-shrink-0 p-3 md:p-4 border-b border-gray-200">
         <div className="relative">
           <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
           <Input
@@ -114,8 +114,8 @@ export const Sidebar: React.FC = () => {
         </div>
       </div>
 
-      {/* Users List */}
-      <div className="flex-1 overflow-y-auto">
+      {/* Users List - Scrollable */}
+      <div className="flex-1 overflow-y-auto min-h-0">
         <div className="p-3 md:p-4">
           <h3 className="text-sm font-medium text-gray-500 mb-3">
             {searchQuery.trim() ? 'Search Results' : 'Conversations'}

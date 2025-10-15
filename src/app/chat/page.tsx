@@ -61,12 +61,13 @@ export default function ChatPage() {
         <div className="w-8" /> {/* Spacer for centering */}
       </div>
 
-      {/* Sidebar */}
+      {/* Sidebar - Desktop: Fixed height with independent scroll */}
       <div className={`
-        fixed md:relative md:block z-40 h-full w-80 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out
+        fixed md:relative md:block z-40 w-80 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out
         ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+        h-full md:h-screen
       `}>
-        <div className="h-full pt-16 md:pt-0">
+        <div className="h-full pt-16 md:pt-0 flex flex-col">
           <Sidebar />
         </div>
       </div>
@@ -79,8 +80,8 @@ export default function ChatPage() {
         />
       )}
 
-      {/* Chat Window */}
-      <div className="flex-1 flex flex-col pt-16 md:pt-0">
+      {/* Chat Window - Desktop: Fixed height with independent scroll */}
+      <div className="flex-1 flex flex-col pt-16 md:pt-0 h-full md:h-screen">
         <ChatWindow />
       </div>
     </div>
