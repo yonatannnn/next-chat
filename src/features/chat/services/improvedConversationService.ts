@@ -73,8 +73,9 @@ export const improvedConversationService = {
             
             const latestMessage = conversationMessages[0];
             const lastMessageTime = latestMessage?.data().timestamp?.toDate() || new Date();
-            const lastMessageText = latestMessage?.data().text || '';
-            const lastMessageSenderId = latestMessage?.data().senderId;
+            const lastMessageData = latestMessage?.data();
+            const lastMessageText = lastMessageData?.text || '';
+            const lastMessageSenderId = lastMessageData?.senderId;
             
             // Count unread messages (messages sent TO current user)
             const unreadCount = conversationMessages.filter(msg => {
@@ -83,15 +84,30 @@ export const improvedConversationService = {
             }).length;
             
             // Check if the last message was sent TO the current user (making it bold)
-            const isLastMessageToMe = latestMessage?.data().receiverId === currentUserId;
+            const isLastMessageToMe = lastMessageData?.receiverId === currentUserId;
             
             // Format the last message to show who sent it
             let formattedLastMessage = '';
+            let previewText = '';
+            
+            // Determine preview text based on message type
             if (lastMessageText) {
+              previewText = lastMessageText;
+            } else if (lastMessageData?.fileUrl) {
+              previewText = '📷 Photo';
+            } else if (lastMessageData?.fileUrls && lastMessageData.fileUrls.length > 0) {
+              previewText = `📷 ${lastMessageData.fileUrls.length} photos`;
+            } else if (lastMessageData?.voiceUrl) {
+              previewText = '🎤 Voice message';
+            } else {
+              previewText = 'Message';
+            }
+            
+            if (previewText) {
               if (lastMessageSenderId === currentUserId) {
-                formattedLastMessage = `Me: ${lastMessageText}`;
+                formattedLastMessage = `Me: ${previewText}`;
               } else {
-                formattedLastMessage = `${userData.username}: ${lastMessageText}`;
+                formattedLastMessage = `${userData.username}: ${previewText}`;
               }
             }
             
