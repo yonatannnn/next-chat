@@ -45,14 +45,18 @@ export const Camera: React.FC<CameraProps> = ({ onPhotoCapture, disabled = false
       console.error('Error accessing camera:', error);
       let errorMessage = 'Unable to access camera. ';
       
-      if (error.name === 'NotAllowedError') {
-        errorMessage += 'Please allow camera permissions and try again.';
-      } else if (error.name === 'NotFoundError') {
-        errorMessage += 'No camera found. Please connect a camera and try again.';
-      } else if (error.name === 'NotSupportedError') {
-        errorMessage += 'Camera not supported in this browser.';
+      if (error instanceof Error) {
+        if (error.name === 'NotAllowedError') {
+          errorMessage += 'Please allow camera permissions and try again.';
+        } else if (error.name === 'NotFoundError') {
+          errorMessage += 'No camera found. Please connect a camera and try again.';
+        } else if (error.name === 'NotSupportedError') {
+          errorMessage += 'Camera not supported in this browser.';
+        } else {
+          errorMessage += `Error: ${error.message}`;
+        }
       } else {
-        errorMessage += `Error: ${error.message}`;
+        errorMessage += 'An unknown error occurred.';
       }
       
       alert(errorMessage);
