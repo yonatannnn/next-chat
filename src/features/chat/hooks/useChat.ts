@@ -36,11 +36,11 @@ export const useChat = (currentUserId: string, selectedUserId: string | null) =>
     return () => unsubscribe();
   }, [currentUserId, selectedUserId, setMessages, setLoading]);
 
-  const sendMessage = async (text: string, fileUrl?: string, fileUrls?: string[], replyTo?: any) => {
+  const sendMessage = async (text: string, fileUrl?: string, fileUrls?: string[], replyTo?: any, voiceUrl?: string, voiceDuration?: number) => {
     if (!selectedUserId) return;
     
     try {
-      await chatService.sendMessage(currentUserId, selectedUserId, text, fileUrl, fileUrls, replyTo);
+      await chatService.sendMessage(currentUserId, selectedUserId, text, fileUrl, fileUrls, replyTo, voiceUrl, voiceDuration);
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : 'An error occurred');
     }
@@ -141,6 +141,21 @@ export const useChat = (currentUserId: string, selectedUserId: string | null) =>
     }
   };
 
+  const sendVoiceMessage = async (audioBlob: Blob, replyTo?: Message) => {
+    if (!selectedUserId) return;
+    
+    setLoading(true);
+    setError(null);
+    try {
+      const { url, duration } = await chatService.uploadVoiceMessage(audioBlob);
+      await chatService.sendMessage(currentUserId, selectedUserId, '', undefined, undefined, replyTo, url, duration);
+    } catch (error: unknown) {
+      setError(error instanceof Error ? error.message : 'An error occurred');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return {
     messages,
     sendMessage,
@@ -148,5 +163,6 @@ export const useChat = (currentUserId: string, selectedUserId: string | null) =>
     deleteMessage: handleDeleteMessage,
     deleteAllMessages: handleDeleteAllMessages,
     forwardMessage,
+    sendVoiceMessage,
   };
 };

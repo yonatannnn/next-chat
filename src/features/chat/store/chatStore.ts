@@ -20,6 +20,8 @@ export interface Message {
   originalSenderId?: string;
   originalSenderName?: string;
   forwardedBy?: string;
+  voiceUrl?: string | null;
+  voiceDuration?: number | null;
 }
 
 export interface Conversation {

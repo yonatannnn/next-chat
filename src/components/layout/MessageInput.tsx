@@ -2,13 +2,15 @@ import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { EmojiPicker } from '@/components/ui/EmojiPicker';
-import { Paperclip, Send, X } from 'lucide-react';
+import { VoiceRecorder } from '@/components/ui/VoiceRecorder';
+import { Paperclip, Send, X, Mic } from 'lucide-react';
 import { Message } from '@/features/chat/store/chatStore';
 
 interface MessageInputProps {
   onSendMessage: (text: string, fileUrl?: string, fileUrls?: string[], replyTo?: Message) => void;
   onFileUpload: (file: File) => Promise<string>;
   onMultipleFileUpload: (files: File[]) => Promise<string[]>;
+  onSendVoiceMessage: (audioBlob: Blob, replyTo?: Message) => void;
   disabled?: boolean;
   replyingTo?: Message | null;
   onCancelReply?: () => void;
@@ -18,6 +20,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   onSendMessage,
   onFileUpload,
   onMultipleFileUpload,
+  onSendVoiceMessage,
   disabled = false,
   replyingTo,
   onCancelReply,
@@ -36,6 +39,10 @@ export const MessageInput: React.FC<MessageInputProps> = ({
 
   const handleEmojiSelect = (emoji: string) => {
     setMessage(prev => prev + emoji);
+  };
+
+  const handleVoiceMessage = (audioBlob: Blob) => {
+    onSendVoiceMessage(audioBlob, replyingTo || undefined);
   };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -110,6 +117,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
           <Paperclip size={18} className="md:w-5 md:h-5" />
         </button>
         <EmojiPicker onEmojiSelect={handleEmojiSelect} disabled={disabled} />
+        <VoiceRecorder onSendVoiceMessage={handleVoiceMessage} disabled={disabled} />
         <div className="flex-1 min-w-0">
           <Input
             value={message}

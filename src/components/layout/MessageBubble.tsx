@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import Image from 'next/image';
 import { Avatar } from '@/components/ui/Avatar';
 import { ImageViewer } from '@/components/ui/ImageViewer';
 import { Message } from '@/features/chat/store/chatStore';
-import { Edit2, Trash2, Check, X, Reply, Forward } from 'lucide-react';
+import { Edit2, Trash2, Check, X, Reply, Forward, Play, Pause, Volume2 } from 'lucide-react';
 
 interface MessageBubbleProps {
   message: Message;
@@ -30,6 +30,8 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   const [editText, setEditText] = useState(message.text);
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [isPlayingVoice, setIsPlayingVoice] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const formatTime = (timestamp: Date) => {
     return new Intl.DateTimeFormat('en-US', {
       hour: '2-digit',
@@ -65,6 +67,28 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
     if (onForward) {
       onForward(message);
     }
+  };
+
+  const handleVoicePlay = () => {
+    if (audioRef.current) {
+      if (isPlayingVoice) {
+        audioRef.current.pause();
+        setIsPlayingVoice(false);
+      } else {
+        audioRef.current.play();
+        setIsPlayingVoice(true);
+      }
+    }
+  };
+
+  const handleVoiceEnded = () => {
+    setIsPlayingVoice(false);
+  };
+
+  const formatDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   return (
@@ -120,6 +144,35 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                 </div>
               </div>
             )}
+            {/* Voice Message */}
+            {!message.deleted && message.voiceUrl && (
+              <div className="mb-2">
+                <div className="flex items-center space-x-3 p-3 bg-gray-100 rounded-lg">
+                  <button
+                    onClick={handleVoicePlay}
+                    className="flex items-center justify-center w-10 h-10 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors"
+                  >
+                    {isPlayingVoice ? <Pause size={20} /> : <Play size={20} />}
+                  </button>
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-2">
+                      <Volume2 size={16} className="text-gray-600" />
+                      <span className="text-sm font-medium text-gray-700">Voice message</span>
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {message.voiceDuration ? formatDuration(message.voiceDuration) : '0:00'}
+                    </div>
+                  </div>
+                </div>
+                <audio
+                  ref={audioRef}
+                  src={message.voiceUrl}
+                  onEnded={handleVoiceEnded}
+                  className="hidden"
+                />
+              </div>
+            )}
+
             {!message.deleted && (message.fileUrl || message.fileUrls) && (
               <div className="mb-2">
                 {message.fileUrls && message.fileUrls.length > 0 ? (

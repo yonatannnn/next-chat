@@ -5,7 +5,7 @@ import { MessageInput } from './MessageInput';
 import { Avatar } from '@/components/ui/Avatar';
 import { DropdownMenu } from '@/components/ui/DropdownMenu';
 import { ChatInfoModal } from '@/components/ui/ChatInfoModal';
-import { useChatStore } from '@/features/chat/store/chatStore';
+import { useChatStore, Message } from '@/features/chat/store/chatStore';
 import { useAuthStore } from '@/features/auth/store/authStore';
 import { useChat } from '@/features/chat/hooks/useChat';
 import { useConversations } from '@/features/chat/hooks/useConversations';
@@ -21,7 +21,7 @@ export const ChatWindow: React.FC = () => {
   const { markAsRead, markAsSeen } = useConversations(userData?.id || '');
   const [isChatInfoOpen, setIsChatInfoOpen] = useState(false);
 
-  const { sendMessage, editMessage, deleteMessage, deleteAllMessages, forwardMessage } = useChat(userData?.id || '', selectedUserId);
+  const { sendMessage, editMessage, deleteMessage, deleteAllMessages, forwardMessage, sendVoiceMessage } = useChat(userData?.id || '', selectedUserId);
 
   const selectedUser = conversations.find(user => user.userId === selectedUserId);
 
@@ -119,6 +119,14 @@ export const ChatWindow: React.FC = () => {
     setForwardingMessage(null);
   };
 
+  const handleSendVoiceMessage = async (audioBlob: Blob, replyTo?: Message) => {
+    try {
+      await sendVoiceMessage(audioBlob, replyTo);
+    } catch (error) {
+      console.error('Error sending voice message:', error);
+    }
+  };
+
   const dropdownItems = [
     {
       id: 'chat-info',
@@ -201,6 +209,7 @@ export const ChatWindow: React.FC = () => {
           onSendMessage={handleSendMessage}
           onFileUpload={handleFileUpload}
           onMultipleFileUpload={handleMultipleFileUpload}
+          onSendVoiceMessage={handleSendVoiceMessage}
           disabled={false}
           replyingTo={replyingTo}
           onCancelReply={handleCancelReply}

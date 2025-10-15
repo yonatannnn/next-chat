@@ -16,7 +16,7 @@ import { db } from '@/lib/firebase';
 import { Message } from '../store/chatStore';
 
 export const chatService = {
-  async sendMessage(senderId: string, receiverId: string, text: string, fileUrl?: string, fileUrls?: string[], replyTo?: any) {
+  async sendMessage(senderId: string, receiverId: string, text: string, fileUrl?: string, fileUrls?: string[], replyTo?: any, voiceUrl?: string, voiceDuration?: number) {
     if (!db) {
       throw new Error('Firebase not initialized');
     }
@@ -34,6 +34,8 @@ export const chatService = {
           text: replyTo.text,
           senderName: replyTo.senderId === senderId ? 'You' : 'Other'
         } : null,
+        voiceUrl: voiceUrl || null,
+        voiceDuration: voiceDuration || null,
       };
       
       await addDoc(collection(db, 'messages'), messageData);
@@ -78,6 +80,8 @@ export const chatService = {
           originalSenderId: data.originalSenderId || null,
           originalSenderName: data.originalSenderName || null,
           forwardedBy: data.forwardedBy || null,
+          voiceUrl: data.voiceUrl || null,
+          voiceDuration: data.voiceDuration || null,
         };
       });
       callback(messages);
@@ -115,6 +119,8 @@ export const chatService = {
           originalSenderId: data.originalSenderId || null,
           originalSenderName: data.originalSenderName || null,
           forwardedBy: data.forwardedBy || null,
+          voiceUrl: data.voiceUrl || null,
+          voiceDuration: data.voiceDuration || null,
         };
       });
       
@@ -238,6 +244,45 @@ export const chatService = {
       if (error instanceof Error && error.message.includes('resource-exhausted')) {
         throw new Error('Service temporarily unavailable. Please try again later.');
       }
+      throw new Error(error instanceof Error ? error.message : 'An error occurred');
+    }
+  },
+
+  async uploadVoiceMessage(audioBlob: Blob): Promise<{ url: string; duration: number }> {
+    if (!db) {
+      throw new Error('Firebase not initialized');
+    }
+    
+    try {
+      // Create a unique filename for the voice message
+      const fileName = `voice-${Date.now()}.webm`;
+      const filePath = `voice-messages/${fileName}`;
+
+      // Upload to Firebase Storage (you'll need to import storage functions)
+      // For now, we'll create a data URL as a placeholder
+      const reader = new FileReader();
+      return new Promise((resolve, reject) => {
+        reader.onload = () => {
+          const dataUrl = reader.result as string;
+          
+          // Get audio duration
+          const audio = new Audio(dataUrl);
+          audio.onloadedmetadata = () => {
+            resolve({
+              url: dataUrl,
+              duration: audio.duration
+            });
+          };
+          audio.onerror = () => {
+            reject(new Error('Failed to load audio'));
+          };
+        };
+        reader.onerror = () => {
+          reject(new Error('Failed to read audio file'));
+        };
+        reader.readAsDataURL(audioBlob);
+      });
+    } catch (error: unknown) {
       throw new Error(error instanceof Error ? error.message : 'An error occurred');
     }
   },
