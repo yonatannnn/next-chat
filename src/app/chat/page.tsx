@@ -16,8 +16,8 @@ export default function ChatPage() {
   const router = useRouter();
   const { user, userData, isLoading } = useAuth();
   const { users } = useUsers(userData?.id || '');
-  const { selectedUserId } = useChatStore();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const { selectedUserId, conversations, setSelectedUserId } = useChatStore();
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true); // Start with sidebar open on mobile
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -25,10 +25,14 @@ export default function ChatPage() {
     }
   }, [user, isLoading, router]);
 
-  // Close sidebar when a chat is selected on mobile
+  // On mobile: show sidebar by default, hide when chat is selected
   useEffect(() => {
-    if (selectedUserId && window.innerWidth < 768) {
-      setIsSidebarOpen(false);
+    if (window.innerWidth < 768) {
+      if (selectedUserId) {
+        setIsSidebarOpen(false); // Hide sidebar when chat is selected
+      } else {
+        setIsSidebarOpen(true); // Show sidebar when no chat is selected
+      }
     }
   }, [selectedUserId]);
 
@@ -51,17 +55,42 @@ export default function ChatPage() {
     <div className="h-screen flex bg-gray-50 relative">
       {/* Mobile Header */}
       <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
-        <button
-          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-          className="p-2 text-gray-600 hover:text-gray-900"
-        >
-          {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
-        </button>
-        <h1 className="text-lg font-semibold text-gray-900">Chat</h1>
-        <div className="w-8" /> {/* Spacer for centering */}
+        {selectedUserId ? (
+          // Chat mode: Show back button and user info
+          <>
+            <button
+              onClick={() => {
+                setSelectedUserId(null);
+                setIsSidebarOpen(true);
+              }}
+              className="p-2 text-gray-600 hover:text-gray-900"
+            >
+              <X size={20} />
+            </button>
+            <div className="flex items-center space-x-2 min-w-0 flex-1">
+              <div className="w-8 h-8 bg-gray-200 rounded-full flex-shrink-0"></div>
+              <h1 className="text-lg font-semibold text-gray-900 truncate">
+                {conversations.find(user => user.userId === selectedUserId)?.username || 'Chat'}
+              </h1>
+            </div>
+            <div className="w-8" /> {/* Spacer for centering */}
+          </>
+        ) : (
+          // Sidebar mode: Show menu button and title
+          <>
+            <button
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              className="p-2 text-gray-600 hover:text-gray-900"
+            >
+              <Menu size={20} />
+            </button>
+            <h1 className="text-lg font-semibold text-gray-900">Chat</h1>
+            <div className="w-8" /> {/* Spacer for centering */}
+          </>
+        )}
       </div>
 
-      {/* Sidebar - Desktop: Fixed height with independent scroll */}
+      {/* Sidebar - Mobile: Show by default, hide when chat selected */}
       <div className={`
         fixed md:relative md:block z-40 w-80 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out
         ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
@@ -72,16 +101,19 @@ export default function ChatPage() {
         </div>
       </div>
 
-      {/* Overlay for mobile */}
-      {isSidebarOpen && (
+      {/* Overlay for mobile - only show when sidebar is open and no chat is selected */}
+      {isSidebarOpen && !selectedUserId && (
         <div 
           className="md:hidden fixed inset-0 bg-black bg-opacity-50 z-30"
           onClick={() => setIsSidebarOpen(false)}
         />
       )}
 
-      {/* Chat Window - Desktop: Fixed height with independent scroll */}
-      <div className="flex-1 flex flex-col pt-16 md:pt-0 h-full md:h-screen">
+      {/* Chat Window - Mobile: Show when chat is selected, hide when sidebar is shown */}
+      <div className={`
+        flex-1 flex flex-col pt-16 md:pt-0 h-full md:h-screen
+        ${selectedUserId ? 'block' : 'hidden md:flex'}
+      `}>
         <ChatWindow />
       </div>
     </div>

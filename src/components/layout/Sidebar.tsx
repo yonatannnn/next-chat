@@ -37,6 +37,9 @@ export const Sidebar: React.FC = () => {
     }
     setSearchQuery('');
     setSearchResults([]);
+    
+    // On mobile, this will trigger the sidebar to hide and chat to show
+    // The parent component handles the layout switching
   };
 
   const formatTime = (date: Date) => {
