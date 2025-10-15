@@ -9,7 +9,8 @@ import {
   deleteDoc,
   doc,
   serverTimestamp,
-  getDocs
+  getDocs,
+  limit
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Message } from '../store/chatStore';
@@ -69,6 +70,40 @@ export const chatService = {
           deleted: data.deleted || false,
         };
       });
+      callback(messages);
+    });
+  },
+
+  subscribeToAllIncomingMessages(currentUserId: string, callback: (messages: Message[]) => void) {
+    if (!db) {
+      throw new Error('Firebase not initialized');
+    }
+    
+    const messagesRef = collection(db, 'messages');
+    // Simple query without orderBy to avoid index requirement
+    const q = query(
+      messagesRef,
+      where('receiverId', '==', currentUserId)
+    );
+
+    return onSnapshot(q, (snapshot) => {
+      const messages: Message[] = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          senderId: data.senderId,
+          receiverId: data.receiverId,
+          text: data.text,
+          fileUrl: data.fileUrl,
+          fileUrls: data.fileUrls,
+          timestamp: data.timestamp?.toDate() || new Date(),
+          edited: data.edited || false,
+          editedAt: data.editedAt?.toDate(),
+          deleted: data.deleted || false,
+        };
+      });
+      
+      // Return all messages, let the notification hook handle filtering
       callback(messages);
     });
   },

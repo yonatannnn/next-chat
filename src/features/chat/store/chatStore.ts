@@ -38,6 +38,7 @@ interface ChatState {
   deleteMessage: (messageId: string) => void;
   deleteAllMessages: (userId1: string, userId2: string) => void;
   setConversations: (conversations: Conversation[]) => void;
+  addConversation: (conversation: Conversation) => void;
   updateConversation: (userId: string, updates: Partial<Conversation>) => void;
   markAsRead: (userId: string) => void;
   markAsSeen: (userId: string) => void;
@@ -76,6 +77,14 @@ export const useChatStore = create<ChatState>((set) => ({
     )
   })),
   setConversations: (conversations) => set({ conversations }),
+  addConversation: (conversation) => set((state) => {
+    // Check if conversation already exists
+    const exists = state.conversations.find(conv => conv.userId === conversation.userId);
+    if (exists) {
+      return state; // Don't add if already exists
+    }
+    return { conversations: [...state.conversations, conversation] };
+  }),
   updateConversation: (userId, updates) => set((state) => ({
     conversations: state.conversations.map(conv => 
       conv.userId === userId ? { ...conv, ...updates } : conv

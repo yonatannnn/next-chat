@@ -2,19 +2,21 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Avatar } from '@/components/ui/Avatar';
 import { Input } from '@/components/ui/Input';
+import { NotificationSettings } from '@/components/ui/NotificationSettings';
 import { useChatStore } from '@/features/chat/store/chatStore';
 import { useAuthStore } from '@/features/auth/store/authStore';
 import { useConversations } from '@/features/chat/hooks/useConversations';
-import { LogOut, MessageCircle, Settings, Search, X } from 'lucide-react';
+import { LogOut, MessageCircle, Settings, Search, X, Bell } from 'lucide-react';
 
 export const Sidebar: React.FC = () => {
   const router = useRouter();
-  const { selectedUserId, setSelectedUserId } = useChatStore();
+  const { selectedUserId, setSelectedUserId, addConversation } = useChatStore();
   const { userData, logout } = useAuthStore();
   const { conversations, searchUsers, markAsRead, markAsSeen } = useConversations(userData?.id || '');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [isNotificationSettingsOpen, setIsNotificationSettingsOpen] = useState(false);
 
   const handleSearch = async (query: string) => {
     setSearchQuery(query);
@@ -30,6 +32,14 @@ export const Sidebar: React.FC = () => {
 
   const handleUserSelect = (userId: string) => {
     setSelectedUserId(userId);
+    
+    // Check if this is a search result (not in conversations yet)
+    const isSearchResult = searchResults.find(user => user.userId === userId);
+    if (isSearchResult) {
+      // Add the user to conversations if they're not already there
+      addConversation(isSearchResult);
+    }
+    
     // Only mark as seen if there are unread messages
     const conversation = conversations.find(conv => conv.userId === userId);
     if (conversation && conversation.unreadCount > 0) {
@@ -74,6 +84,13 @@ export const Sidebar: React.FC = () => {
               </div>
             </div>
             <div className="flex items-center space-x-1 md:space-x-2">
+              <button
+                onClick={() => setIsNotificationSettingsOpen(true)}
+                className="p-1.5 md:p-2 text-gray-400 hover:text-gray-600 transition-colors"
+                title="Notification Settings"
+              >
+                <Bell size={18} className="md:w-5 md:h-5" />
+              </button>
               <button
                 onClick={() => router.push('/profile')}
                 className="p-1.5 md:p-2 text-gray-400 hover:text-gray-600 transition-colors"
@@ -178,6 +195,12 @@ export const Sidebar: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Notification Settings Modal */}
+      <NotificationSettings
+        isOpen={isNotificationSettingsOpen}
+        onClose={() => setIsNotificationSettingsOpen(false)}
+      />
     </div>
   );
 };
