@@ -10,17 +10,18 @@ import { useAuthStore } from '@/features/auth/store/authStore';
 import { useChat } from '@/features/chat/hooks/useChat';
 import { useConversations } from '@/features/chat/hooks/useConversations';
 import { supabase } from '@/lib/supabase';
+import { ForwardMessageModal } from '@/components/ui/ForwardMessageModal';
 import { Trash2, Info } from 'lucide-react';
 
 export const ChatWindow: React.FC = () => {
   const router = useRouter();
-  const { selectedUserId, messages, conversations, setSelectedUserId, replyingTo, setReplyingTo } = useChatStore();
+  const { selectedUserId, messages, conversations, setSelectedUserId, replyingTo, setReplyingTo, forwardingMessage, setForwardingMessage } = useChatStore();
   const { userData } = useAuthStore();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { markAsRead, markAsSeen } = useConversations(userData?.id || '');
   const [isChatInfoOpen, setIsChatInfoOpen] = useState(false);
 
-  const { sendMessage, editMessage, deleteMessage, deleteAllMessages } = useChat(userData?.id || '', selectedUserId);
+  const { sendMessage, editMessage, deleteMessage, deleteAllMessages, forwardMessage } = useChat(userData?.id || '', selectedUserId);
 
   const selectedUser = conversations.find(user => user.userId === selectedUserId);
 
@@ -99,6 +100,25 @@ export const ChatWindow: React.FC = () => {
     setReplyingTo(null);
   };
 
+  const handleForward = (message: any) => {
+    setForwardingMessage(message);
+  };
+
+  const handleForwardMessage = async (message: any, recipientIds: string[]) => {
+    try {
+      // Get the original sender name from the current conversation or messages
+      const originalSenderName = message.senderId === userData?.id ? 'You' : selectedUser?.username || 'Unknown';
+      await forwardMessage(message, recipientIds, originalSenderName);
+      setForwardingMessage(null);
+    } catch (error) {
+      console.error('Error forwarding message:', error);
+    }
+  };
+
+  const handleCancelForward = () => {
+    setForwardingMessage(null);
+  };
+
   const dropdownItems = [
     {
       id: 'chat-info',
@@ -169,6 +189,7 @@ export const ChatWindow: React.FC = () => {
             onEdit={editMessage}
             onDelete={deleteMessage}
             onReply={handleReply}
+            onForward={handleForward}
           />
         ))}
         <div ref={messagesEndRef} />
@@ -201,6 +222,16 @@ export const ChatWindow: React.FC = () => {
           lastMessageTime={selectedUser.lastMessageTime}
         />
       )}
+
+      {/* Forward Message Modal */}
+      <ForwardMessageModal
+        isOpen={!!forwardingMessage}
+        onClose={handleCancelForward}
+        message={forwardingMessage}
+        conversations={conversations}
+        currentUserId={userData?.id || ''}
+        onForward={handleForwardMessage}
+      />
     </div>
   );
 };

@@ -3,7 +3,7 @@ import Image from 'next/image';
 import { Avatar } from '@/components/ui/Avatar';
 import { ImageViewer } from '@/components/ui/ImageViewer';
 import { Message } from '@/features/chat/store/chatStore';
-import { Edit2, Trash2, Check, X, Reply } from 'lucide-react';
+import { Edit2, Trash2, Check, X, Reply, Forward } from 'lucide-react';
 
 interface MessageBubbleProps {
   message: Message;
@@ -13,6 +13,7 @@ interface MessageBubbleProps {
   onEdit?: (messageId: string, newText: string) => void;
   onDelete?: (messageId: string) => void;
   onReply?: (message: Message) => void;
+  onForward?: (message: Message) => void;
 }
 
 export const MessageBubble: React.FC<MessageBubbleProps> = ({
@@ -23,6 +24,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   onEdit,
   onDelete,
   onReply,
+  onForward,
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(message.text);
@@ -56,6 +58,12 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   const handleReply = () => {
     if (onReply) {
       onReply(message);
+    }
+  };
+
+  const handleForward = () => {
+    if (onForward) {
+      onForward(message);
     }
   };
 
@@ -95,6 +103,20 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                   {message.replyTo.text.length > 50 
                     ? `${message.replyTo.text.substring(0, 50)}...` 
                     : message.replyTo.text}
+                </div>
+              </div>
+            )}
+
+            {/* Forward context */}
+            {message.isForwarded && (
+              <div className={`mb-2 p-2 rounded border-l-2 ${
+                isOwn 
+                  ? 'bg-purple-500 bg-opacity-20 border-purple-400' 
+                  : 'bg-gray-200 border-gray-400'
+              }`}>
+                <div className="text-xs opacity-75 mb-1 flex items-center">
+                  <Forward size={12} className="mr-1" />
+                  Forwarded from {message.originalSenderName || 'Unknown'}
                 </div>
               </div>
             )}
@@ -215,6 +237,15 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                       title="Reply to message"
                     >
                       <Reply size={14} />
+                    </button>
+                  )}
+                  {onForward && (
+                    <button
+                      onClick={handleForward}
+                      className="p-1 bg-purple-500 text-white rounded hover:bg-purple-600"
+                      title="Forward message"
+                    >
+                      <Forward size={14} />
                     </button>
                   )}
                   {isOwn && (

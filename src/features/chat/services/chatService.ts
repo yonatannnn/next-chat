@@ -74,6 +74,10 @@ export const chatService = {
           editedAt: data.editedAt?.toDate(),
           deleted: data.deleted || false,
           replyTo: data.replyTo || null,
+          isForwarded: data.isForwarded || false,
+          originalSenderId: data.originalSenderId || null,
+          originalSenderName: data.originalSenderName || null,
+          forwardedBy: data.forwardedBy || null,
         };
       });
       callback(messages);
@@ -107,6 +111,10 @@ export const chatService = {
           editedAt: data.editedAt?.toDate(),
           deleted: data.deleted || false,
           replyTo: data.replyTo || null,
+          isForwarded: data.isForwarded || false,
+          originalSenderId: data.originalSenderId || null,
+          originalSenderName: data.originalSenderName || null,
+          forwardedBy: data.forwardedBy || null,
         };
       });
       
@@ -192,6 +200,40 @@ export const chatService = {
       });
 
       await Promise.all(deletePromises);
+    } catch (error: unknown) {
+      if (error instanceof Error && error.message.includes('resource-exhausted')) {
+        throw new Error('Service temporarily unavailable. Please try again later.');
+      }
+      throw new Error(error instanceof Error ? error.message : 'An error occurred');
+    }
+  },
+
+  async forwardMessage(originalMessage: Message, senderId: string, recipientIds: string[], originalSenderName?: string) {
+    if (!db) {
+      throw new Error('Firebase not initialized');
+    }
+    
+    try {
+      // Create forwarded messages for each recipient
+      const forwardPromises = recipientIds.map(async (recipientId) => {
+        const forwardedMessageData = {
+          senderId,
+          receiverId: recipientId,
+          text: originalMessage.text, // Keep original text without "Forwarded:" prefix
+          fileUrl: originalMessage.fileUrl,
+          fileUrls: originalMessage.fileUrls,
+          timestamp: serverTimestamp(),
+          isForwarded: true,
+          originalMessageId: originalMessage.id,
+          originalSenderId: originalMessage.senderId,
+          originalSenderName: originalSenderName || 'Unknown',
+          forwardedBy: senderId,
+        };
+        
+        return addDoc(collection(db!, 'messages'), forwardedMessageData);
+      });
+
+      await Promise.all(forwardPromises);
     } catch (error: unknown) {
       if (error instanceof Error && error.message.includes('resource-exhausted')) {
         throw new Error('Service temporarily unavailable. Please try again later.');

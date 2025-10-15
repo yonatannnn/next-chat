@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { useChatStore } from '../store/chatStore';
+import { useChatStore, Message } from '../store/chatStore';
 import { chatService } from '../services/chatService';
 
 export const useChat = (currentUserId: string, selectedUserId: string | null) => {
@@ -129,11 +129,24 @@ export const useChat = (currentUserId: string, selectedUserId: string | null) =>
     }
   };
 
+  const forwardMessage = async (message: Message, recipientIds: string[], originalSenderName?: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      await chatService.forwardMessage(message, currentUserId, recipientIds, originalSenderName);
+    } catch (error: unknown) {
+      setError(error instanceof Error ? error.message : 'An error occurred');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return {
     messages,
     sendMessage,
     editMessage,
     deleteMessage: handleDeleteMessage,
     deleteAllMessages: handleDeleteAllMessages,
+    forwardMessage,
   };
 };

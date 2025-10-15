@@ -16,6 +16,10 @@ export interface Message {
     text: string;
     senderName: string;
   } | null;
+  isForwarded?: boolean;
+  originalSenderId?: string;
+  originalSenderName?: string;
+  forwardedBy?: string;
 }
 
 export interface Conversation {
@@ -38,6 +42,7 @@ interface ChatState {
   error: string | null;
   searchQuery: string;
   replyingTo: Message | null;
+  forwardingMessage: Message | null;
   setMessages: (messages: Message[]) => void;
   addMessage: (message: Message) => void;
   updateMessage: (messageId: string, updates: Partial<Message>) => void;
@@ -54,6 +59,7 @@ interface ChatState {
   setError: (error: string | null) => void;
   clearMessages: () => void;
   setReplyingTo: (message: Message | null) => void;
+  setForwardingMessage: (message: Message | null) => void;
 }
 
 export const useChatStore = create<ChatState>((set) => ({
@@ -64,6 +70,7 @@ export const useChatStore = create<ChatState>((set) => ({
   error: null,
   searchQuery: '',
   replyingTo: null,
+  forwardingMessage: null,
   setMessages: (messages) => set({ messages }),
   addMessage: (message) => set((state) => ({ 
     messages: [...state.messages, message] 
@@ -130,4 +137,5 @@ export const useChatStore = create<ChatState>((set) => ({
   setError: (error) => set({ error }),
   clearMessages: () => set({ messages: [] }),
   setReplyingTo: (replyingTo) => set({ replyingTo }),
+  setForwardingMessage: (forwardingMessage) => set({ forwardingMessage }),
 }));
