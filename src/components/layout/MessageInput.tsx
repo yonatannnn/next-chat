@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { EmojiPicker } from '@/components/ui/EmojiPicker';
 import { VoiceRecorder } from '@/components/ui/VoiceRecorder';
+import { Camera } from '@/components/ui/Camera';
 import { Paperclip, Send, X, Mic } from 'lucide-react';
 import { Message } from '@/features/chat/store/chatStore';
 
@@ -46,6 +47,18 @@ export const MessageInput: React.FC<MessageInputProps> = ({
 
   const handleVoiceMessage = (audioBlob: Blob) => {
     onSendVoiceMessage(audioBlob, replyingTo || undefined);
+  };
+
+  const handlePhotoCapture = async (file: File) => {
+    setIsUploading(true);
+    try {
+      const fileUrl = await onFileUpload(file);
+      onSendMessage('', fileUrl, undefined, replyingTo || undefined);
+    } catch (error) {
+      console.error('Photo upload failed:', error);
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   // Global keyboard event listener for typing in chat
@@ -152,6 +165,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
         >
           <Paperclip size={18} className="md:w-5 md:h-5" />
         </button>
+        <Camera onPhotoCapture={handlePhotoCapture} disabled={disabled || isUploading} />
         <EmojiPicker onEmojiSelect={handleEmojiSelect} disabled={disabled} />
         <VoiceRecorder onSendVoiceMessage={handleVoiceMessage} disabled={disabled} />
         <div className="flex-1 min-w-0">
