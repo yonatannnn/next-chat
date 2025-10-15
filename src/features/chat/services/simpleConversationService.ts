@@ -14,6 +14,10 @@ import { Conversation } from '../store/chatStore';
 
 export const simpleConversationService = {
   subscribeToConversations(currentUserId: string, callback: (conversations: Conversation[]) => void) {
+    if (!db) {
+      throw new Error('Firebase not initialized');
+    }
+    
     const messagesRef = collection(db, 'messages');
     
     // Get all messages where current user is either sender OR receiver
@@ -57,7 +61,7 @@ export const simpleConversationService = {
       allUserIds.forEach(userId => {
         try {
           // Get user info directly by ID
-          getDoc(doc(db, 'users', userId)).then(userDoc => {
+          getDoc(doc(db!, 'users', userId)).then(userDoc => {
             if (userDoc.exists()) {
               const userData = userDoc.data();
               
@@ -141,6 +145,10 @@ export const simpleConversationService = {
   },
 
   async searchUsers(searchQuery: string, currentUserId: string): Promise<Conversation[]> {
+    if (!db) {
+      throw new Error('Firebase not initialized');
+    }
+    
     try {
       const usersRef = collection(db, 'users');
       

@@ -4,6 +4,10 @@ import { User } from '../store/usersStore';
 
 export const userService = {
   subscribeToUsers(currentUserId: string, callback: (users: User[]) => void) {
+    if (!db) {
+      throw new Error('Firebase not initialized');
+    }
+    
     const usersRef = collection(db, 'users');
     const q = query(usersRef, where('id', '!=', currentUserId));
 

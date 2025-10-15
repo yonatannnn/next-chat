@@ -20,6 +20,10 @@ export interface UserData {
 
 export const authService = {
   async register(email: string, password: string, username: string, name?: string, avatar?: string) {
+    if (!auth || !db) {
+      throw new Error('Firebase not initialized');
+    }
+    
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
@@ -42,6 +46,10 @@ export const authService = {
   },
 
   async login(email: string, password: string) {
+    if (!auth || !db) {
+      throw new Error('Firebase not initialized');
+    }
+    
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
@@ -57,6 +65,10 @@ export const authService = {
   },
 
   async logout() {
+    if (!auth) {
+      throw new Error('Firebase not initialized');
+    }
+    
     try {
       await signOut(auth);
     } catch (error: unknown) {
@@ -65,6 +77,10 @@ export const authService = {
   },
 
   async getUserData(userId: string): Promise<UserData | null> {
+    if (!db) {
+      throw new Error('Firebase not initialized');
+    }
+    
     try {
       const userDoc = await getDoc(doc(db, 'users', userId));
       return userDoc.exists() ? userDoc.data() as UserData : null;
@@ -74,10 +90,17 @@ export const authService = {
   },
 
   onAuthStateChanged(callback: (user: User | null) => void) {
+    if (!auth) {
+      throw new Error('Firebase not initialized');
+    }
     return onAuthStateChanged(auth, callback);
   },
 
   async checkUsernameAvailability(username: string, currentUserId?: string): Promise<boolean> {
+    if (!db) {
+      throw new Error('Firebase not initialized');
+    }
+    
     try {
       const usersRef = collection(db, 'users');
       const q = query(usersRef, where('username', '==', username));
@@ -95,6 +118,10 @@ export const authService = {
   },
 
   async updateProfile(userId: string, updates: Partial<Omit<UserData, 'id' | 'email'>>): Promise<void> {
+    if (!db) {
+      throw new Error('Firebase not initialized');
+    }
+    
     try {
       const userRef = doc(db, 'users', userId);
       await updateDoc(userRef, {
