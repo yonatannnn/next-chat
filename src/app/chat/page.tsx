@@ -9,6 +9,9 @@ import { useUsers } from '@/features/users/hooks/useUsers';
 import { useChatStore } from '@/features/chat/store/chatStore';
 import { Menu, X } from 'lucide-react';
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
+
 export default function ChatPage() {
   const router = useRouter();
   const { user, userData, isLoading } = useAuth();

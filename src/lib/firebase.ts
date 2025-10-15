@@ -1,4 +1,4 @@
-import { initializeApp } from 'firebase/app';
+import { initializeApp, getApps } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
@@ -11,13 +11,22 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
+// Initialize Firebase only if config is available and app doesn't exist
+let app;
+let auth;
+let db;
 
-// Initialize Firebase Authentication and get a reference to the service
-export const auth = getAuth(app);
+if (typeof window !== 'undefined' && firebaseConfig.apiKey) {
+  // Only initialize on client side and if config is available
+  if (getApps().length === 0) {
+    app = initializeApp(firebaseConfig);
+  } else {
+    app = getApps()[0];
+  }
+  
+  auth = getAuth(app);
+  db = getFirestore(app);
+}
 
-// Initialize Cloud Firestore and get a reference to the service
-export const db = getFirestore(app);
-
+export { auth, db };
 export default app;

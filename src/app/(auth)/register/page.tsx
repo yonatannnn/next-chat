@@ -11,6 +11,9 @@ import { useAuth } from '@/features/auth/hooks/useAuth';
 import { authService } from '@/features/auth/services/authService';
 import { Camera, Loader2 } from 'lucide-react';
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
+
 interface RegisterForm {
   name: string;
   username: string;

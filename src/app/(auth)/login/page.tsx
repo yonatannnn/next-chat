@@ -8,6 +8,9 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
+
 interface LoginForm {
   email: string;
   password: string;

@@ -9,6 +9,9 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { ArrowLeft, Camera, Save, User, Mail, Calendar, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
+
 export default function ProfilePage() {
   const router = useRouter();
   const { user, userData, setUserData } = useAuth();
