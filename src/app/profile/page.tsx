@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { authService } from '@/features/auth/services/authService';
@@ -12,9 +12,9 @@ import { ArrowLeft, Camera, Save, User, Mail, Calendar, CheckCircle, XCircle, Lo
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
 
-export default function ProfilePage() {
+function ProfilePage() {
   const router = useRouter();
-  const { user, userData, setUserData } = useAuth();
+  const { user, userData, setUserData, isLoading: authLoading } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [formData, setFormData] = useState({
@@ -23,10 +23,8 @@ export default function ProfilePage() {
     email: userData?.email || '',
   });
   const [avatar, setAvatar] = useState(userData?.avatar || '');
-  const [isLoading, setIsLoading] = useState(false);
+  const [isAvatarLoading, setIsAvatarLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [usernameError, setUsernameError] = useState('');
-  const [usernameValidating, setUsernameValidating] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
   const [createdAt, setCreatedAt] = useState<string>('');
 
@@ -50,44 +48,8 @@ export default function ProfilePage() {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-    
-    if (name === 'username') {
-      setUsernameError('');
-      setSaveMessage('');
-    }
   };
 
-  const validateUsername = async (username: string) => {
-    if (!username.trim()) {
-      setUsernameError('Username is required');
-      return false;
-    }
-
-    if (username === userData?.username) {
-      setUsernameError('');
-      return true;
-    }
-
-    setUsernameValidating(true);
-    try {
-      const isAvailable = await authService.checkUsernameAvailability(username, user?.uid);
-      if (!isAvailable) {
-        setUsernameError('Username is already taken');
-        return false;
-      }
-      setUsernameError('');
-      return true;
-    } catch (error) {
-      setUsernameError('Error checking username availability');
-      return false;
-    } finally {
-      setUsernameValidating(false);
-    }
-  };
-
-  const handleUsernameBlur = async () => {
-    await validateUsername(formData.username);
-  };
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -105,7 +67,7 @@ export default function ProfilePage() {
       return;
     }
 
-    setIsLoading(true);
+    setIsAvatarLoading(true);
     try {
       const avatarUrl = await authService.uploadAvatar(file, user?.uid!);
       setAvatar(avatarUrl);
@@ -113,18 +75,27 @@ export default function ProfilePage() {
     } catch (error) {
       alert('Failed to upload avatar. Please try again.');
     } finally {
-      setIsLoading(false);
+      setIsAvatarLoading(false);
     }
   };
 
   const handleSave = async () => {
-    if (!user?.uid) return;
+    if (!user?.uid) {
+      setSaveMessage('User not authenticated');
+      return;
+    }
 
-    const isUsernameValid = await validateUsername(formData.username);
-    if (!isUsernameValid) return;
+    if (!userData) {
+      setSaveMessage('User data not loaded');
+      return;
+    }
 
+    // Start saving process
     setIsSaving(true);
+    setSaveMessage('');
+    
     try {
+      // Prepare updates
       const updates: any = {};
       
       if (formData.name !== userData?.name) {
@@ -147,13 +118,26 @@ export default function ProfilePage() {
         setSaveMessage('No changes to save');
       }
     } catch (error) {
-      alert('Failed to update profile. Please try again.');
+      console.error('Profile update error:', error);
+      setSaveMessage('Failed to update profile. Please try again.');
     } finally {
       setIsSaving(false);
     }
   };
 
   const hasChanges = formData.name !== userData?.name || formData.username !== userData?.username || avatar !== userData?.avatar;
+
+  // Show loading state while auth is loading
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading profile...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -189,10 +173,10 @@ export default function ProfilePage() {
                 />
                 <button
                   onClick={() => fileInputRef.current?.click()}
-                  disabled={isLoading}
+                  disabled={isAvatarLoading}
                   className="absolute -bottom-2 -right-2 bg-white rounded-full p-1.5 md:p-2 shadow-lg hover:shadow-xl transition-shadow disabled:opacity-50"
                 >
-                  {isLoading ? (
+                  {isAvatarLoading ? (
                     <Loader2 size={14} className="animate-spin text-blue-600 md:w-4 md:h-4" />
                   ) : (
                     <Camera size={14} className="text-blue-600 md:w-4 md:h-4" />
@@ -232,28 +216,12 @@ export default function ProfilePage() {
                 <label className="block text-sm font-medium text-gray-700">
                   Username
                 </label>
-                <div className="relative">
-                  <Input
-                    name="username"
-                    value={formData.username}
-                    onChange={handleInputChange}
-                    onBlur={handleUsernameBlur}
-                    placeholder="Enter your username"
-                    className={`pr-10 ${usernameError ? 'border-red-300 focus:border-red-500' : ''}`}
-                  />
-                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                    {usernameValidating ? (
-                      <Loader2 size={16} className="animate-spin text-gray-400" />
-                    ) : usernameError ? (
-                      <XCircle size={16} className="text-red-500" />
-                    ) : formData.username && !usernameError ? (
-                      <CheckCircle size={16} className="text-green-500" />
-                    ) : null}
-                  </div>
-                </div>
-                {usernameError && (
-                  <p className="text-sm text-red-600">{usernameError}</p>
-                )}
+                <Input
+                  name="username"
+                  value={formData.username}
+                  onChange={handleInputChange}
+                  placeholder="Enter your username"
+                />
               </div>
 
               {/* Email (Read-only) */}
@@ -329,7 +297,7 @@ export default function ProfilePage() {
               </Button>
               <Button
                 onClick={handleSave}
-                disabled={isSaving || !hasChanges || !!usernameError || usernameValidating}
+                disabled={isSaving || !hasChanges}
                 className="flex items-center justify-center space-x-2 w-full sm:w-auto"
               >
                 {isSaving ? (
@@ -337,7 +305,14 @@ export default function ProfilePage() {
                 ) : (
                   <Save size={16} />
                 )}
-                <span>{isSaving ? 'Saving...' : 'Save Changes'}</span>
+                <span>
+                  {isSaving 
+                    ? 'Saving changes...' 
+                    : hasChanges 
+                      ? 'Save Changes' 
+                      : 'No Changes'
+                  }
+                </span>
               </Button>
             </div>
           </div>
@@ -355,3 +330,5 @@ export default function ProfilePage() {
     </div>
   );
 }
+
+export default ProfilePage;

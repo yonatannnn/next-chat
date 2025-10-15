@@ -60,7 +60,28 @@ export const authService = {
       
       return { user, userData };
     } catch (error: unknown) {
-      throw new Error(error instanceof Error ? error.message : 'An error occurred');
+      console.error('Login error:', error);
+      
+      // Handle specific Firebase auth errors
+      if (error instanceof Error) {
+        if (error.message.includes('auth/user-not-found')) {
+          throw new Error('No account found with this email address');
+        } else if (error.message.includes('auth/wrong-password')) {
+          throw new Error('Incorrect password');
+        } else if (error.message.includes('auth/invalid-email')) {
+          throw new Error('Invalid email address');
+        } else if (error.message.includes('auth/user-disabled')) {
+          throw new Error('This account has been disabled');
+        } else if (error.message.includes('auth/too-many-requests')) {
+          throw new Error('Too many failed attempts. Please try again later');
+        } else if (error.message.includes('auth/network-request-failed')) {
+          throw new Error('Network error. Please check your connection');
+        } else {
+          throw new Error(error.message);
+        }
+      }
+      
+      throw new Error('An unexpected error occurred during login');
     }
   },
 
@@ -113,6 +134,7 @@ export const authService = {
       
       return querySnapshot.empty;
     } catch (error: unknown) {
+      console.error('Username availability check error:', error);
       throw new Error(error instanceof Error ? error.message : 'An error occurred');
     }
   },
@@ -129,6 +151,7 @@ export const authService = {
         updatedAt: serverTimestamp(),
       });
     } catch (error: unknown) {
+      console.error('Profile update error:', error);
       throw new Error(error instanceof Error ? error.message : 'An error occurred');
     }
   },
