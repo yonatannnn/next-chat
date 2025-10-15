@@ -44,6 +44,10 @@ export const ChatWindow: React.FC = () => {
   };
 
   const handleFileUpload = async (file: File): Promise<string> => {
+    if (!supabase) {
+      throw new Error('Supabase not initialized');
+    }
+    
     const fileExt = file.name.split('.').pop();
     const fileName = `${Date.now()}.${fileExt}`;
     const filePath = `chat-files/${fileName}`;

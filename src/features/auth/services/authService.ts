@@ -134,6 +134,10 @@ export const authService = {
   },
 
   async uploadAvatar(file: File, userId: string): Promise<string> {
+    if (!supabase) {
+      throw new Error('Supabase not initialized');
+    }
+    
     try {
       const fileExt = file.name.split('.').pop();
       const fileName = `${userId}-${Date.now()}.${fileExt}`;
