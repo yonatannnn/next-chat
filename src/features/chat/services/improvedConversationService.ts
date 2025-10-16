@@ -119,6 +119,7 @@ export const improvedConversationService = {
               avatar: userData.avatar,
               lastMessage: formattedLastMessage,
               lastMessageTime: lastMessageTime,
+              lastMessageSeen: lastMessageData?.seen || false,
               unreadCount: isLastMessageToMe ? 1 : 0, // Use 1 for bold, 0 for normal
               isOnline: true
             };

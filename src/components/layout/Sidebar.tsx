@@ -183,7 +183,9 @@ export const Sidebar: React.FC = () => {
                       )}
                     </div>
                     {user.lastMessage && (
-                      <p className="text-xs md:text-sm text-gray-500 truncate">
+                      <p className={`text-xs md:text-sm text-gray-500 truncate ${
+                        user.lastMessage.startsWith('Me: ') || user.lastMessageSeen ? 'font-normal' : 'font-bold'
+                      }`}>
                         {user.lastMessage}
                       </p>
                     )}

@@ -9,13 +9,14 @@ import { useChatStore, Message } from '@/features/chat/store/chatStore';
 import { useAuthStore } from '@/features/auth/store/authStore';
 import { useChat } from '@/features/chat/hooks/useChat';
 import { useConversations } from '@/features/chat/hooks/useConversations';
+import { chatService } from '@/features/chat/services/chatService';
 import { supabase } from '@/lib/supabase';
 import { ForwardMessageModal } from '@/components/ui/ForwardMessageModal';
 import { Trash2, Info } from 'lucide-react';
 
 export const ChatWindow: React.FC = () => {
   const router = useRouter();
-  const { selectedUserId, messages, conversations, setSelectedUserId, replyingTo, setReplyingTo, forwardingMessage, setForwardingMessage } = useChatStore();
+  const { selectedUserId, messages, conversations, setSelectedUserId, replyingTo, setReplyingTo, forwardingMessage, setForwardingMessage, markMessageAsSeen, updateConversation } = useChatStore();
   const { userData } = useAuthStore();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { markAsRead, markAsSeen } = useConversations(userData?.id || '');
@@ -38,6 +39,34 @@ export const ChatWindow: React.FC = () => {
       }
     }
   }, [selectedUserId, conversations, markAsSeen]);
+
+  // Mark messages as seen when they're viewed by the recipient
+  useEffect(() => {
+    if (selectedUserId && userData?.id) {
+      // Find messages sent TO the current user (incoming messages) that haven't been seen yet
+      // When the current user views the chat, mark incoming messages as seen
+      const unseenMessages = messages.filter(msg => 
+        msg.senderId === selectedUserId && 
+        msg.receiverId === userData.id && 
+        !msg.seen
+      );
+
+      // Mark each unseen incoming message as seen
+      unseenMessages.forEach(async (message) => {
+        try {
+          await chatService.markMessageAsSeen(message.id);
+          markMessageAsSeen(message.id);
+          
+          // Update the conversation's lastMessageSeen status
+          if (selectedUserId) {
+            updateConversation(selectedUserId, { lastMessageSeen: true });
+          }
+        } catch (error) {
+          console.error('Error marking message as seen:', error);
+        }
+      });
+    }
+  }, [selectedUserId, messages, userData?.id, markMessageAsSeen, updateConversation]);
 
   const handleSendMessage = async (text: string, fileUrl?: string, fileUrls?: string[], replyTo?: any) => {
     if (!selectedUserId) return;

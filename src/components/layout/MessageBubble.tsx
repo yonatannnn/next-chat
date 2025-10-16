@@ -323,9 +323,21 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
               </div>
             )}
           </div>
-          <span className="text-xs text-gray-500 mt-1">
-            {formatTime(message.timestamp)}
-          </span>
+          <div className="flex items-center space-x-1 mt-1">
+            <span className="text-xs text-gray-500">
+              {formatTime(message.timestamp)}
+            </span>
+            {isOwn && message.seen && (
+              <span className="text-xs text-blue-500" title={`Seen at ${message.seenAt ? formatTime(message.seenAt) : 'Unknown time'}`}>
+                ✓✓
+              </span>
+            )}
+            {isOwn && !message.seen && (
+              <span className="text-xs text-gray-400">
+                ✓
+              </span>
+            )}
+          </div>
         </div>
       </div>
 

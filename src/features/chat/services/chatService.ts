@@ -82,6 +82,8 @@ export const chatService = {
           forwardedBy: data.forwardedBy || null,
           voiceUrl: data.voiceUrl || null,
           voiceDuration: data.voiceDuration || null,
+          seen: data.seen || false,
+          seenAt: data.seenAt?.toDate(),
         };
       });
       callback(messages);
@@ -121,6 +123,8 @@ export const chatService = {
           forwardedBy: data.forwardedBy || null,
           voiceUrl: data.voiceUrl || null,
           voiceDuration: data.voiceDuration || null,
+          seen: data.seen || false,
+          seenAt: data.seenAt?.toDate(),
         };
       });
       
@@ -160,6 +164,25 @@ export const chatService = {
         deleted: true,
         text: 'This message was deleted',
         fileUrl: null,
+      });
+    } catch (error: unknown) {
+      if (error instanceof Error && error.message.includes('resource-exhausted')) {
+        throw new Error('Service temporarily unavailable. Please try again later.');
+      }
+      throw new Error(error instanceof Error ? error.message : 'An error occurred');
+    }
+  },
+
+  async markMessageAsSeen(messageId: string) {
+    if (!db) {
+      throw new Error('Firebase not initialized');
+    }
+    
+    try {
+      const messageRef = doc(db, 'messages', messageId);
+      await updateDoc(messageRef, {
+        seen: true,
+        seenAt: serverTimestamp(),
       });
     } catch (error: unknown) {
       if (error instanceof Error && error.message.includes('resource-exhausted')) {

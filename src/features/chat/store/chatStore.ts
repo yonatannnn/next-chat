@@ -22,6 +22,8 @@ export interface Message {
   forwardedBy?: string;
   voiceUrl?: string | null;
   voiceDuration?: number | null;
+  seen?: boolean;
+  seenAt?: Date;
 }
 
 export interface Conversation {
@@ -32,6 +34,7 @@ export interface Conversation {
   avatar?: string;
   lastMessage?: string;
   lastMessageTime?: Date;
+  lastMessageSeen?: boolean;
   unreadCount: number;
   isOnline?: boolean;
 }
@@ -55,6 +58,7 @@ interface ChatState {
   updateConversation: (userId: string, updates: Partial<Conversation>) => void;
   markAsRead: (userId: string) => void;
   markAsSeen: (userId: string) => void;
+  markMessageAsSeen: (messageId: string) => void;
   setSelectedUserId: (userId: string | null) => void;
   setSearchQuery: (query: string) => void;
   setLoading: (loading: boolean) => void;
@@ -133,6 +137,11 @@ export const useChatStore = create<ChatState>((set) => ({
       )
     };
   }),
+  markMessageAsSeen: (messageId) => set((state) => ({
+    messages: state.messages.map(msg => 
+      msg.id === messageId ? { ...msg, seen: true, seenAt: new Date() } : msg
+    )
+  })),
   setSelectedUserId: (selectedUserId) => set({ selectedUserId }),
   setSearchQuery: (searchQuery) => set({ searchQuery }),
   setLoading: (isLoading) => set({ isLoading }),
