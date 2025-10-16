@@ -10,8 +10,15 @@ const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
-    origin: ["http://localhost:3000", "https://your-domain.com"], // Add your frontend URLs
-    methods: ["GET", "POST"]
+    origin: [
+      "http://localhost:3000", 
+      "https://your-domain.com",
+      process.env.FRONTEND_URL,
+      /\.railway\.app$/,  // Allow Railway domains
+      /\.vercel\.app$/    // Allow Vercel domains
+    ].filter(Boolean), // Remove undefined values
+    methods: ["GET", "POST"],
+    credentials: true
   }
 });
 
