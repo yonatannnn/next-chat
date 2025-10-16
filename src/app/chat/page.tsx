@@ -56,12 +56,25 @@ export default function ChatPage() {
   // Handle browser back button on mobile
   useEffect(() => {
     const handlePopState = () => {
+      // Only handle if we're on mobile and have a selected chat
       if (window.innerWidth < 768 && (selectedUserId || selectedGroupId)) {
+        console.log('Browser back button pressed - clearing selected chat');
+        
+        // Clear the selected chat to show sidebar
         setSelectedUserId(null);
         setSelectedGroupId(null);
-        setIsSidebarOpen(true);
+        
+        // Push a new state to prevent the browser from actually going back
+        setTimeout(() => {
+          window.history.pushState(null, '', window.location.pathname);
+        }, 0);
       }
     };
+
+    // Push initial state to handle back button properly
+    if (window.innerWidth < 768) {
+      window.history.pushState(null, '', window.location.pathname);
+    }
 
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
