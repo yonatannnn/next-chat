@@ -24,6 +24,32 @@ export const Sidebar: React.FC = () => {
   const [isNotificationSettingsOpen, setIsNotificationSettingsOpen] = useState(false);
   const [isCreateGroupOpen, setIsCreateGroupOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'chats' | 'groups'>('chats');
+  const [isNavigatingToSettings, setIsNavigatingToSettings] = useState(false);
+
+  const handleSettingsNavigation = async () => {
+    setIsNavigatingToSettings(true);
+    try {
+      await router.push('/profile');
+      // Reset loading state after navigation
+      setTimeout(() => {
+        setIsNavigatingToSettings(false);
+      }, 500);
+    } catch (error) {
+      console.error('Navigation error:', error);
+      setIsNavigatingToSettings(false);
+    }
+  };
+
+  // Reset loading state when component unmounts or after a delay
+  useEffect(() => {
+    if (isNavigatingToSettings) {
+      const timer = setTimeout(() => {
+        setIsNavigatingToSettings(false);
+      }, 3000); // Reset after 3 seconds as fallback
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isNavigatingToSettings]);
 
   const handleSearch = async (query: string) => {
     setSearchQuery(query);
@@ -114,11 +140,16 @@ export const Sidebar: React.FC = () => {
                 <Bell size={18} className="md:w-5 md:h-5" />
               </button>
               <button
-                onClick={() => router.push('/profile')}
-                className="p-1.5 md:p-2 text-gray-400 hover:text-gray-600 transition-colors"
+                onClick={handleSettingsNavigation}
+                disabled={isNavigatingToSettings}
+                className="p-1.5 md:p-2 text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-50"
                 title="Profile Settings"
               >
-                <Settings size={18} className="md:w-5 md:h-5" />
+                {isNavigatingToSettings ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-400 border-t-transparent"></div>
+                ) : (
+                  <Settings size={18} className="md:w-5 md:h-5" />
+                )}
               </button>
               <button
                 onClick={logout}
