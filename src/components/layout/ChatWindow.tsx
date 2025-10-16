@@ -48,9 +48,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   const [previousMessageCount, setPreviousMessageCount] = useState(0);
   const [processingRecommendation, setProcessingRecommendation] = useState<string | null>(null);
   const [showHardHideConfirm, setShowHardHideConfirm] = useState(false);
-  const [isUserScrolling, setIsUserScrolling] = useState(false);
-  const [scrollTimeout, setScrollTimeout] = useState<NodeJS.Timeout | null>(null);
-  const [lastScrollTop, setLastScrollTop] = useState(0);
   const [isAtBottom, setIsAtBottom] = useState(true);
 
   // Handle mobile search state
@@ -61,43 +58,28 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     }
   }, [isMobileSearchOpen, setIsMobileSearchOpen]);
 
-  // Handle scroll detection to prevent auto-scroll when user is manually scrolling
+  // Simple scroll detection - only track if user is at bottom
   useEffect(() => {
     const messagesContainer = document.querySelector('.messages-container');
     if (!messagesContainer) return;
-
-    let scrollTimeoutId: NodeJS.Timeout;
 
     const handleScroll = () => {
       const currentScrollTop = messagesContainer.scrollTop;
       const scrollHeight = messagesContainer.scrollHeight;
       const clientHeight = messagesContainer.clientHeight;
       
-      // Check if user is at the bottom (within 10px)
-      const atBottom = currentScrollTop + clientHeight >= scrollHeight - 10;
+      // Check if user is at the bottom (within 5px for more precision)
+      const atBottom = currentScrollTop + clientHeight >= scrollHeight - 5;
       setIsAtBottom(atBottom);
-      
-      // Check if user is scrolling up (away from bottom)
-      if (currentScrollTop < lastScrollTop) {
-        setIsUserScrolling(true);
-      }
-      
-      setLastScrollTop(currentScrollTop);
-      
-      // Clear existing timeout
-      clearTimeout(scrollTimeoutId);
-      
-      // Set a new timeout to reset user scrolling state
-      scrollTimeoutId = setTimeout(() => {
-        setIsUserScrolling(false);
-      }, 2000); // Reset after 2 seconds of no scrolling
     };
+
+    // Initial check
+    handleScroll();
 
     messagesContainer.addEventListener('scroll', handleScroll, { passive: true });
     
     return () => {
       messagesContainer.removeEventListener('scroll', handleScroll);
-      clearTimeout(scrollTimeoutId);
     };
   }, []);
 
@@ -224,26 +206,28 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         // After 1 second, enable smooth scrolling for future messages
         setTimeout(() => {
           setSmoothScrollingEnabled(true);
-        }, 1000);
+        }, 200);
       } 
-      // When new messages are added, check if user is near bottom before scrolling
-      else if (messages.length > previousMessageCount) {
-        // Don't auto-scroll if search is active or user is manually scrolling
-        if (isSearchOpen || isUserScrolling) {
-          setPreviousMessageCount(messages.length);
-          return;
-        }
-        
-        // Only auto-scroll if user is at the bottom and not manually scrolling
-        if (isAtBottom && !isUserScrolling) {
-          // Use smooth scrolling if enabled, otherwise instant
-          const scrollBehavior = smoothScrollingEnabled ? 'smooth' : 'auto';
-          messagesEndRef.current.scrollIntoView({ behavior: scrollBehavior });
+      // When new messages are added, only auto-scroll if user is at the bottom
+      else if (messages.length > previousMessageCount && !isSearchOpen) {
+        // Double-check if user is still at the bottom before auto-scrolling
+        const messagesContainer = document.querySelector('.messages-container');
+        if (messagesContainer) {
+          const currentScrollTop = messagesContainer.scrollTop;
+          const scrollHeight = messagesContainer.scrollHeight;
+          const clientHeight = messagesContainer.clientHeight;
+          const atBottom = currentScrollTop + clientHeight >= scrollHeight - 5;
+          
+          if (atBottom) {
+            // Use smooth scrolling if enabled, otherwise instant
+            const scrollBehavior = smoothScrollingEnabled ? 'smooth' : 'auto';
+            messagesEndRef.current.scrollIntoView({ behavior: scrollBehavior });
+          }
         }
       }
       setPreviousMessageCount(messages.length);
     }
-  }, [messages, isInitialLoad, previousMessageCount, smoothScrollingEnabled, isSearchOpen, isUserScrolling, isAtBottom]);
+  }, [messages, isInitialLoad, previousMessageCount, smoothScrollingEnabled, isSearchOpen]);
 
   useEffect(() => {
     if (selectedUserId || selectedGroupId) {
