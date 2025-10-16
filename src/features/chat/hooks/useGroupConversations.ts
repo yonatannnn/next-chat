@@ -1,0 +1,57 @@
+import { useEffect, useRef } from 'react';
+import { useChatStore } from '../store/chatStore';
+import { groupChatService } from '../services/groupChatService';
+
+export const useGroupConversations = (currentUserId: string) => {
+  const { 
+    groupConversations, 
+    setGroupConversations, 
+    setLoading, 
+    setError,
+    searchQuery,
+    setSearchQuery
+  } = useChatStore();
+  
+  const isSubscribed = useRef(false);
+
+  useEffect(() => {
+    if (!currentUserId) return;
+
+    setLoading(true);
+    isSubscribed.current = true;
+    
+    let unsubscribe: (() => void) | null = null;
+    
+    groupChatService.getGroupConversations(
+      currentUserId, 
+      (newGroupConversations) => {
+        setGroupConversations(newGroupConversations);
+        setLoading(false);
+      }
+    ).then((unsub) => {
+      unsubscribe = unsub;
+    });
+
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+      isSubscribed.current = false;
+    };
+  }, [currentUserId, setGroupConversations, setLoading]);
+
+  const markGroupAsRead = (groupId: string) => {
+    useChatStore.getState().markGroupAsRead(groupId);
+  };
+
+  const markGroupAsSeen = (groupId: string) => {
+    useChatStore.getState().markGroupAsSeen(groupId);
+  };
+
+  return {
+    groupConversations,
+    searchQuery,
+    markGroupAsRead,
+    markGroupAsSeen,
+  };
+};

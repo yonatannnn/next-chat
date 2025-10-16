@@ -3,13 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-  "dev": "next dev",
-  "dev:https": "HTTPS=true npm run dev",
-  "build": "next build",
-  "start": "next start -p 8080",
-  "lint": "eslint"
-}
-,
+    "dev": "next dev",
+    "dev:https": "HTTPS=true npm run dev",
+    "build": "next build",
+    "start": "next start -p 8080",
+    "lint": "eslint"
+  },
   "dependencies": {
     "@supabase/supabase-js": "^2.75.0",
     "firebase": "^12.4.0",

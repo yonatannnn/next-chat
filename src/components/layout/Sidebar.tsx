@@ -3,22 +3,27 @@ import { useRouter } from 'next/navigation';
 import { Avatar } from '@/components/ui/Avatar';
 import { Input } from '@/components/ui/Input';
 import { NotificationSettings } from '@/components/ui/NotificationSettings';
+import { CreateGroupModal } from '@/components/ui/CreateGroupModal';
 import { useChatStore } from '@/features/chat/store/chatStore';
 import { useAuthStore } from '@/features/auth/store/authStore';
 import { useConversations } from '@/features/chat/hooks/useConversations';
+import { useGroupConversations } from '@/features/chat/hooks/useGroupConversations';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
-import { LogOut, MessageCircle, Settings, Search, X, Bell } from 'lucide-react';
+import { LogOut, MessageCircle, Settings, Search, X, Bell, Users, Plus } from 'lucide-react';
 
 export const Sidebar: React.FC = () => {
   const router = useRouter();
-  const { selectedUserId, setSelectedUserId, addConversation } = useChatStore();
+  const { selectedUserId, selectedGroupId, setSelectedUserId, setSelectedGroupId, addConversation } = useChatStore();
   const { userData, logout } = useAuthStore();
   const { conversations, searchUsers, markAsRead, markAsSeen } = useConversations(userData?.id || '');
+  const { groupConversations, markGroupAsRead, markGroupAsSeen } = useGroupConversations(userData?.id || '');
   const { allStatuses } = useOnlineStatus(userData?.id);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isNotificationSettingsOpen, setIsNotificationSettingsOpen] = useState(false);
+  const [isCreateGroupOpen, setIsCreateGroupOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<'chats' | 'groups'>('chats');
 
   const handleSearch = async (query: string) => {
     setSearchQuery(query);
@@ -34,6 +39,7 @@ export const Sidebar: React.FC = () => {
 
   const handleUserSelect = (userId: string) => {
     setSelectedUserId(userId);
+    setSelectedGroupId(null); // Clear group selection
     
     // Check if this is a search result (not in conversations yet)
     const isSearchResult = searchResults.find(user => user.userId === userId);
@@ -54,6 +60,20 @@ export const Sidebar: React.FC = () => {
     // The parent component handles the layout switching
   };
 
+  const handleGroupSelect = (groupId: string) => {
+    setSelectedGroupId(groupId);
+    setSelectedUserId(null); // Clear user selection
+    
+    // Only mark as seen if there are unread messages
+    const groupConversation = groupConversations.find(conv => conv.groupId === groupId);
+    if (groupConversation && groupConversation.unreadCount > 0) {
+      markGroupAsSeen(groupId);
+    }
+    
+    // On mobile, this will trigger the sidebar to hide and chat to show
+    // The parent component handles the layout switching
+  };
+
   const formatTime = (date: Date) => {
     const now = new Date();
     const diff = now.getTime() - date.getTime();
@@ -68,7 +88,7 @@ export const Sidebar: React.FC = () => {
     return date.toLocaleDateString();
   };
 
-  const displayList = searchQuery.trim() ? searchResults : conversations;
+  const displayList = searchQuery.trim() ? searchResults : (activeTab === 'chats' ? conversations : groupConversations);
 
   return (
     <div className="w-full bg-white border-r border-gray-200 flex flex-col h-full">
@@ -111,26 +131,65 @@ export const Sidebar: React.FC = () => {
           </div>
       </div>
 
+      {/* Tab Navigation */}
+      <div className="flex-shrink-0 border-b border-gray-200">
+        <div className="flex">
+          <button
+            onClick={() => setActiveTab('chats')}
+            className={`flex-1 flex items-center justify-center space-x-2 py-3 px-4 text-sm font-medium transition-colors ${
+              activeTab === 'chats'
+                ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
+                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            <MessageCircle size={16} />
+            <span>Chats</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('groups')}
+            className={`flex-1 flex items-center justify-center space-x-2 py-3 px-4 text-sm font-medium transition-colors ${
+              activeTab === 'groups'
+                ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
+                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            <Users size={16} />
+            <span>Groups</span>
+          </button>
+        </div>
+      </div>
+
       {/* Search - Fixed */}
       <div className="flex-shrink-0 p-3 md:p-4 border-b border-gray-200">
-        <div className="relative">
-          <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-          <Input
-            type="text"
-            placeholder="Search users..."
-            value={searchQuery}
-            onChange={(e) => handleSearch(e.target.value)}
-            className="pl-10 pr-10 text-sm"
-          />
-          {searchQuery && (
+        <div className="flex items-center space-x-2">
+          <div className="relative flex-1">
+            <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+            <Input
+              type="text"
+              placeholder={activeTab === 'chats' ? "Search users..." : "Search groups..."}
+              value={searchQuery}
+              onChange={(e) => handleSearch(e.target.value)}
+              className="pl-10 pr-10 text-sm"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => {
+                  setSearchQuery('');
+                  setSearchResults([]);
+                }}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                <X size={16} />
+              </button>
+            )}
+          </div>
+          {activeTab === 'groups' && (
             <button
-              onClick={() => {
-                setSearchQuery('');
-                setSearchResults([]);
-              }}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              onClick={() => setIsCreateGroupOpen(true)}
+              className="p-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-md transition-colors"
+              title="Create Group"
             >
-              <X size={16} />
+              <Plus size={18} />
             </button>
           )}
         </div>
@@ -140,7 +199,7 @@ export const Sidebar: React.FC = () => {
       <div className="flex-1 overflow-y-auto min-h-0">
         <div className="p-3 md:p-4">
           <h3 className="text-sm font-medium text-gray-500 mb-3">
-            {searchQuery.trim() ? 'Search Results' : 'Conversations'}
+            {searchQuery.trim() ? 'Search Results' : (activeTab === 'chats' ? 'Conversations' : 'Groups')}
           </h3>
           <div className="space-y-1 md:space-y-2">
             {isSearching ? (
@@ -151,54 +210,79 @@ export const Sidebar: React.FC = () => {
             ) : displayList.length === 0 ? (
               <div className="text-center py-6 md:py-8">
                 <p className="text-gray-500 text-sm">
-                  {searchQuery.trim() ? 'No users found' : 'No conversations yet'}
+                  {searchQuery.trim() 
+                    ? (activeTab === 'chats' ? 'No users found' : 'No groups found')
+                    : (activeTab === 'chats' ? 'No conversations yet' : 'No groups yet')
+                  }
                 </p>
+                {activeTab === 'groups' && !searchQuery.trim() && (
+                  <button
+                    onClick={() => setIsCreateGroupOpen(true)}
+                    className="mt-2 text-blue-600 hover:text-blue-700 text-sm font-medium"
+                  >
+                    Create your first group
+                  </button>
+                )}
               </div>
             ) : (
-              displayList.map((user) => (
-                <button
-                  key={user.userId}
-                  onClick={() => handleUserSelect(user.userId)}
-                  className={`w-full flex items-center space-x-2 md:space-x-3 p-2 md:p-3 rounded-lg transition-colors ${
-                    selectedUserId === user.userId
-                      ? 'bg-blue-50 border border-blue-200'
-                      : 'hover:bg-gray-50'
-                  }`}
-                >
-                  <div className="relative flex-shrink-0">
-                    <Avatar
-                      src={user.avatar}
-                      alt={user.username}
-                      size="sm"
-                      className="md:w-10 md:h-10"
-                    />
-                    {/* Online status indicator */}
-                    {allStatuses[user.userId]?.isOnline && (
-                      <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
-                    )}
-                  </div>
-                  <div className="flex-1 text-left min-w-0">
-                    <div className="flex items-center justify-between">
-                      <h4 className={`font-medium text-sm md:text-base ${user.unreadCount > 0 ? 'font-bold' : 'font-normal'} text-gray-900 truncate`}>
-                        {user.username}
-                      </h4>
-                      {user.lastMessageTime && (
-                        <span className="text-xs text-gray-500 flex-shrink-0 ml-2">
-                          {formatTime(user.lastMessageTime)}
-                        </span>
+              displayList.map((item) => {
+                const isGroup = activeTab === 'groups';
+                const isSelected = isGroup ? selectedGroupId === item.groupId : selectedUserId === item.userId;
+                
+                return (
+                  <button
+                    key={isGroup ? item.groupId : item.userId}
+                    onClick={() => isGroup ? handleGroupSelect(item.groupId) : handleUserSelect(item.userId)}
+                    className={`w-full flex items-center space-x-2 md:space-x-3 p-2 md:p-3 rounded-lg transition-colors ${
+                      isSelected
+                        ? 'bg-blue-50 border border-blue-200'
+                        : 'hover:bg-gray-50'
+                    }`}
+                  >
+                    <div className="relative flex-shrink-0">
+                      <Avatar
+                        src={isGroup ? item.groupAvatar : item.avatar}
+                        alt={isGroup ? item.groupName : item.username}
+                        size="sm"
+                        className="md:w-10 md:h-10"
+                      />
+                      {/* Online status indicator for users only */}
+                      {!isGroup && allStatuses[item.userId]?.isOnline && (
+                        <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
                       )}
                     </div>
-                    {user.lastMessage && (
-                      <p className={`text-xs md:text-sm text-gray-500 truncate ${
-                        user.lastMessage.startsWith('Me: ') || user.lastMessageSeen ? 'font-normal' : 'font-bold'
-                      }`}>
-                        {user.lastMessage}
-                      </p>
+                    <div className="flex-1 text-left min-w-0">
+                      <div className="flex items-center justify-between">
+                        <h4 className={`font-medium text-sm md:text-base ${item.unreadCount > 0 ? 'font-bold' : 'font-normal'} text-gray-900 truncate`}>
+                          {isGroup ? item.groupName : item.username}
+                        </h4>
+                        {item.lastMessageTime && (
+                          <span className="text-xs text-gray-500 flex-shrink-0 ml-2">
+                            {formatTime(item.lastMessageTime)}
+                          </span>
+                        )}
+                      </div>
+                      {item.lastMessage && (
+                        <p className={`text-xs md:text-sm text-gray-500 truncate ${
+                          item.lastMessage.startsWith('Me: ') || item.lastMessageSeen ? 'font-normal' : 'font-bold'
+                        }`}>
+                          {item.lastMessage}
+                        </p>
+                      )}
+                      {isGroup && (
+                        <p className="text-xs text-gray-400 mt-1">
+                          {item.memberCount} member{item.memberCount !== 1 ? 's' : ''}
+                        </p>
+                      )}
+                    </div>
+                    {isGroup ? (
+                      <Users size={14} className="text-gray-400 flex-shrink-0 md:w-4 md:h-4" />
+                    ) : (
+                      <MessageCircle size={14} className="text-gray-400 flex-shrink-0 md:w-4 md:h-4" />
                     )}
-                  </div>
-                  <MessageCircle size={14} className="text-gray-400 flex-shrink-0 md:w-4 md:h-4" />
-                </button>
-              ))
+                  </button>
+                );
+              })
             )}
           </div>
         </div>
@@ -208,6 +292,12 @@ export const Sidebar: React.FC = () => {
       <NotificationSettings
         isOpen={isNotificationSettingsOpen}
         onClose={() => setIsNotificationSettingsOpen(false)}
+      />
+
+      {/* Create Group Modal */}
+      <CreateGroupModal
+        isOpen={isCreateGroupOpen}
+        onClose={() => setIsCreateGroupOpen(false)}
       />
     </div>
   );

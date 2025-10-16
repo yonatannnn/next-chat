@@ -4,6 +4,7 @@ export interface Message {
   id: string;
   senderId: string;
   receiverId: string;
+  groupId?: string; // For group messages
   text: string;
   fileUrl?: string | null;
   fileUrls?: string[] | null; // For multiple images
@@ -39,10 +40,46 @@ export interface Conversation {
   isOnline?: boolean;
 }
 
+export interface Group {
+  id: string;
+  name: string;
+  description?: string;
+  avatar?: string;
+  createdBy: string;
+  createdAt: Date;
+  members: GroupMember[];
+  isActive: boolean;
+}
+
+export interface GroupMember {
+  userId: string;
+  username: string;
+  email: string;
+  avatar?: string;
+  role: 'admin' | 'member';
+  joinedAt: Date;
+  isActive: boolean;
+}
+
+export interface GroupConversation {
+  id: string;
+  groupId: string;
+  groupName: string;
+  groupAvatar?: string;
+  lastMessage?: string;
+  lastMessageTime?: Date;
+  lastMessageSeen?: boolean;
+  unreadCount: number;
+  memberCount: number;
+  isActive: boolean;
+}
+
 interface ChatState {
   messages: Message[];
   conversations: Conversation[];
+  groupConversations: GroupConversation[];
   selectedUserId: string | null;
+  selectedGroupId: string | null;
   isLoading: boolean;
   error: string | null;
   searchQuery: string;
@@ -56,10 +93,16 @@ interface ChatState {
   setConversations: (conversations: Conversation[]) => void;
   addConversation: (conversation: Conversation) => void;
   updateConversation: (userId: string, updates: Partial<Conversation>) => void;
+  setGroupConversations: (groupConversations: GroupConversation[]) => void;
+  addGroupConversation: (groupConversation: GroupConversation) => void;
+  updateGroupConversation: (groupId: string, updates: Partial<GroupConversation>) => void;
   markAsRead: (userId: string) => void;
   markAsSeen: (userId: string) => void;
+  markGroupAsRead: (groupId: string) => void;
+  markGroupAsSeen: (groupId: string) => void;
   markMessageAsSeen: (messageId: string) => void;
   setSelectedUserId: (userId: string | null) => void;
+  setSelectedGroupId: (groupId: string | null) => void;
   setSearchQuery: (query: string) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
@@ -71,7 +114,9 @@ interface ChatState {
 export const useChatStore = create<ChatState>((set) => ({
   messages: [],
   conversations: [],
+  groupConversations: [],
   selectedUserId: null,
+  selectedGroupId: null,
   isLoading: false,
   error: null,
   searchQuery: '',
@@ -142,7 +187,46 @@ export const useChatStore = create<ChatState>((set) => ({
       msg.id === messageId ? { ...msg, seen: true, seenAt: new Date() } : msg
     )
   })),
+  setGroupConversations: (groupConversations) => set({ groupConversations }),
+  addGroupConversation: (groupConversation) => set((state) => {
+    // Check if group conversation already exists
+    const exists = state.groupConversations.find(conv => conv.groupId === groupConversation.groupId);
+    if (exists) {
+      return state; // Don't add if already exists
+    }
+    return { groupConversations: [...state.groupConversations, groupConversation] };
+  }),
+  updateGroupConversation: (groupId, updates) => set((state) => ({
+    groupConversations: state.groupConversations.map(conv => 
+      conv.groupId === groupId ? { ...conv, ...updates } : conv
+    )
+  })),
+  markGroupAsRead: (groupId) => set((state) => {
+    const groupConversation = state.groupConversations.find(conv => conv.groupId === groupId);
+    if (!groupConversation || groupConversation.unreadCount === 0) {
+      return state; // No change needed
+    }
+    
+    return {
+      groupConversations: state.groupConversations.map(conv => 
+        conv.groupId === groupId ? { ...conv, unreadCount: 0 } : conv
+      )
+    };
+  }),
+  markGroupAsSeen: (groupId) => set((state) => {
+    const groupConversation = state.groupConversations.find(conv => conv.groupId === groupId);
+    if (!groupConversation || groupConversation.unreadCount === 0) {
+      return state; // No change needed
+    }
+    
+    return {
+      groupConversations: state.groupConversations.map(conv => 
+        conv.groupId === groupId ? { ...conv, unreadCount: 0 } : conv
+      )
+    };
+  }),
   setSelectedUserId: (selectedUserId) => set({ selectedUserId }),
+  setSelectedGroupId: (selectedGroupId) => set({ selectedGroupId }),
   setSearchQuery: (searchQuery) => set({ searchQuery }),
   setLoading: (isLoading) => set({ isLoading }),
   setError: (error) => set({ error }),

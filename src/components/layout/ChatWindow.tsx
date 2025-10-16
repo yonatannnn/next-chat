@@ -8,25 +8,34 @@ import { ChatInfoModal } from '@/components/ui/ChatInfoModal';
 import { useChatStore, Message } from '@/features/chat/store/chatStore';
 import { useAuthStore } from '@/features/auth/store/authStore';
 import { useChat } from '@/features/chat/hooks/useChat';
+import { useGroupChat } from '@/features/chat/hooks/useGroupChat';
 import { useConversations } from '@/features/chat/hooks/useConversations';
+import { useGroupConversations } from '@/features/chat/hooks/useGroupConversations';
 import { chatService } from '@/features/chat/services/chatService';
+import { groupChatService } from '@/features/chat/services/groupChatService';
 import { supabase } from '@/lib/supabase';
 import { ForwardMessageModal } from '@/components/ui/ForwardMessageModal';
-import { Trash2, Info } from 'lucide-react';
+import { AddMembersModal } from '@/components/ui/AddMembersModal';
+import { Trash2, Info, Users } from 'lucide-react';
 
 export const ChatWindow: React.FC = () => {
   const router = useRouter();
-  const { selectedUserId, messages, conversations, setSelectedUserId, replyingTo, setReplyingTo, forwardingMessage, setForwardingMessage, markMessageAsSeen, updateConversation } = useChatStore();
+  const { selectedUserId, selectedGroupId, messages, conversations, groupConversations, setSelectedUserId, setSelectedGroupId, replyingTo, setReplyingTo, forwardingMessage, setForwardingMessage, markMessageAsSeen, updateConversation, updateGroupConversation } = useChatStore();
   const { userData } = useAuthStore();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { markAsRead, markAsSeen } = useConversations(userData?.id || '');
+  const { markGroupAsRead, markGroupAsSeen } = useGroupConversations(userData?.id || '');
   const [isChatInfoOpen, setIsChatInfoOpen] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [isAddMembersOpen, setIsAddMembersOpen] = useState(false);
   const [previousMessageCount, setPreviousMessageCount] = useState(0);
 
   const { sendMessage, editMessage, deleteMessage, deleteAllMessages, forwardMessage, sendVoiceMessage } = useChat(userData?.id || '', selectedUserId);
+  const { sendMessage: sendGroupMessage, editMessage: editGroupMessage, deleteMessage: deleteGroupMessage, sendVoiceMessage: sendGroupVoiceMessage } = useGroupChat(userData?.id || '', selectedGroupId);
 
   const selectedUser = conversations.find(user => user.userId === selectedUserId);
+  const selectedGroup = groupConversations.find(group => group.groupId === selectedGroupId);
+  const isGroupChat = !!selectedGroupId;
 
   useEffect(() => {
     if (messagesEndRef.current) {
@@ -52,50 +61,79 @@ export const ChatWindow: React.FC = () => {
   }, [messages, isInitialLoad, previousMessageCount]);
 
   useEffect(() => {
-    if (selectedUserId) {
+    if (selectedUserId || selectedGroupId) {
       // Reset initial load state when switching chats
       setIsInitialLoad(true);
       setPreviousMessageCount(0);
       
       // Only mark as seen if there are unread messages
-      const conversation = conversations.find(conv => conv.userId === selectedUserId);
-      if (conversation && conversation.unreadCount > 0) {
-        markAsSeen(selectedUserId);
+      if (selectedUserId) {
+        const conversation = conversations.find(conv => conv.userId === selectedUserId);
+        if (conversation && conversation.unreadCount > 0) {
+          markAsSeen(selectedUserId);
+        }
+      } else if (selectedGroupId) {
+        const groupConversation = groupConversations.find(conv => conv.groupId === selectedGroupId);
+        if (groupConversation && groupConversation.unreadCount > 0) {
+          markGroupAsSeen(selectedGroupId);
+        }
       }
     }
-  }, [selectedUserId, conversations, markAsSeen]);
+  }, [selectedUserId, selectedGroupId, conversations, groupConversations, markAsSeen, markGroupAsSeen]);
 
   // Mark messages as seen when they're viewed by the recipient
   useEffect(() => {
-    if (selectedUserId && userData?.id) {
-      // Find messages sent TO the current user (incoming messages) that haven't been seen yet
-      // When the current user views the chat, mark incoming messages as seen
-      const unseenMessages = messages.filter(msg => 
-        msg.senderId === selectedUserId && 
-        msg.receiverId === userData.id && 
-        !msg.seen
-      );
+    if ((selectedUserId || selectedGroupId) && userData?.id) {
+      if (selectedUserId) {
+        // Find messages sent TO the current user (incoming messages) that haven't been seen yet
+        const unseenMessages = messages.filter(msg => 
+          msg.senderId === selectedUserId && 
+          msg.receiverId === userData.id && 
+          !msg.seen
+        );
 
-      // Mark each unseen incoming message as seen
-      unseenMessages.forEach(async (message) => {
-        try {
-          await chatService.markMessageAsSeen(message.id);
-          markMessageAsSeen(message.id);
-          
-          // Update the conversation's lastMessageSeen status
-          if (selectedUserId) {
+        // Mark each unseen incoming message as seen
+        unseenMessages.forEach(async (message) => {
+          try {
+            await chatService.markMessageAsSeen(message.id);
+            markMessageAsSeen(message.id);
+            
+            // Update the conversation's lastMessageSeen status
             updateConversation(selectedUserId, { lastMessageSeen: true });
+          } catch (error) {
+            console.error('Error marking message as seen:', error);
           }
-        } catch (error) {
-          console.error('Error marking message as seen:', error);
-        }
-      });
+        });
+      } else if (selectedGroupId) {
+        // For group messages, mark messages from other users as seen
+        const unseenMessages = messages.filter(msg => 
+          msg.groupId === selectedGroupId && 
+          msg.senderId !== userData.id && 
+          !msg.seen
+        );
+
+        // Mark each unseen group message as seen
+        unseenMessages.forEach(async (message) => {
+          try {
+            await groupChatService.markGroupMessageAsSeen(message.id);
+            markMessageAsSeen(message.id);
+            
+            // Update the group conversation's lastMessageSeen status
+            updateGroupConversation(selectedGroupId, { lastMessageSeen: true });
+          } catch (error) {
+            console.error('Error marking group message as seen:', error);
+          }
+        });
+      }
     }
-  }, [selectedUserId, messages, userData?.id, markMessageAsSeen, updateConversation]);
+  }, [selectedUserId, selectedGroupId, messages, userData?.id, markMessageAsSeen, updateConversation, updateGroupConversation]);
 
   const handleSendMessage = async (text: string, fileUrl?: string, fileUrls?: string[], replyTo?: any) => {
-    if (!selectedUserId) return;
-    await sendMessage(text, fileUrl, fileUrls, replyTo);
+    if (selectedUserId) {
+      await sendMessage(text, fileUrl, fileUrls, replyTo);
+    } else if (selectedGroupId) {
+      await sendGroupMessage(text, fileUrl, fileUrls, replyTo);
+    }
     setReplyingTo(null); // Clear reply state after sending
   };
 
@@ -173,9 +211,37 @@ export const ChatWindow: React.FC = () => {
     setForwardingMessage(null);
   };
 
+  const handleDeleteGroup = async () => {
+    if (!selectedGroupId || !userData?.id) return;
+    
+    if (window.confirm('Are you sure you want to delete this group? This action cannot be undone.')) {
+      try {
+        await groupChatService.deleteGroup(selectedGroupId);
+        setSelectedGroupId(null);
+        // The group will be removed from the list automatically via the subscription
+      } catch (error) {
+        console.error('Error deleting group:', error);
+        alert('Failed to delete group. Please try again.');
+      }
+    }
+  };
+
+  const handleAddMembers = () => {
+    setIsAddMembersOpen(true);
+  };
+
+  const handleMembersAdded = () => {
+    // Members will be updated automatically via the subscription
+    console.log('Members added successfully');
+  };
+
   const handleSendVoiceMessage = async (audioBlob: Blob, replyTo?: Message) => {
     try {
-      await sendVoiceMessage(audioBlob, replyTo);
+      if (selectedUserId) {
+        await sendVoiceMessage(audioBlob, replyTo);
+      } else if (selectedGroupId) {
+        await sendGroupVoiceMessage(audioBlob, replyTo);
+      }
     } catch (error) {
       console.error('Error sending voice message:', error);
     }
@@ -184,20 +250,34 @@ export const ChatWindow: React.FC = () => {
   const dropdownItems = [
     {
       id: 'chat-info',
-      label: 'Chat Info',
+      label: isGroupChat ? 'Group Info' : 'Chat Info',
       icon: <Info size={16} />,
       onClick: handleChatInfo,
     },
-    {
+    ...(isGroupChat ? [
+      {
+        id: 'add-members',
+        label: 'Add Members',
+        icon: <Users size={16} />,
+        onClick: handleAddMembers,
+      },
+      {
+        id: 'delete-group',
+        label: 'Delete Group',
+        icon: <Trash2 size={16} />,
+        onClick: handleDeleteGroup,
+        variant: 'danger' as const,
+      }
+    ] : [{
       id: 'delete-chat',
       label: 'Delete Chat',
       icon: <Trash2 size={16} />,
       onClick: handleDeleteChat,
       variant: 'danger' as const,
-    },
+    }]),
   ];
 
-  if (!selectedUserId) {
+  if (!selectedUserId && !selectedGroupId) {
     return (
       <div className="flex-1 flex items-center justify-center bg-gray-50 p-4">
         <div className="text-center max-w-sm">
@@ -205,7 +285,7 @@ export const ChatWindow: React.FC = () => {
             Select a chat to start messaging
           </h3>
           <p className="text-gray-500 text-sm md:text-base">
-            Choose a user from the sidebar to begin your conversation
+            Choose a user or group from the sidebar to begin your conversation
           </p>
         </div>
       </div>
@@ -219,18 +299,25 @@ export const ChatWindow: React.FC = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2 md:space-x-3 min-w-0 flex-1">
             <button
-              onClick={() => router.push(`/friend/${selectedUserId}`)}
+              onClick={() => isGroupChat ? undefined : router.push(`/friend/${selectedUserId}`)}
               className="hover:opacity-80 transition-opacity flex-shrink-0"
             >
               <Avatar
-                src={selectedUser?.avatar}
-                alt={selectedUser?.username || 'User'}
+                src={isGroupChat ? selectedGroup?.groupAvatar : selectedUser?.avatar}
+                alt={isGroupChat ? selectedGroup?.groupName || 'Group' : selectedUser?.username || 'User'}
                 size="sm"
                 className="md:w-10 md:h-10"
               />
             </button>
             <div className="min-w-0 flex-1">
-              <h3 className="font-semibold text-gray-900 text-sm md:text-base truncate">{selectedUser?.username}</h3>
+              <h3 className="font-semibold text-gray-900 text-sm md:text-base truncate">
+                {isGroupChat ? selectedGroup?.groupName : selectedUser?.username}
+              </h3>
+              {isGroupChat && selectedGroup && (
+                <p className="text-xs text-gray-500">
+                  {selectedGroup.memberCount} member{selectedGroup.memberCount !== 1 ? 's' : ''}
+                </p>
+              )}
             </div>
           </div>
           <div className="flex-shrink-0">
@@ -241,19 +328,38 @@ export const ChatWindow: React.FC = () => {
 
       {/* Messages - Scrollable */}
       <div className="flex-1 overflow-y-auto min-h-0 p-3 md:p-4 space-y-3 md:space-y-4">
-        {messages.map((message) => (
-          <MessageBubble
-            key={message.id}
-            message={message}
-            isOwn={message.senderId === userData?.id}
-            senderName={message.senderId === userData?.id ? userData?.username || 'You' : selectedUser?.username || 'Unknown'}
-            senderAvatar={message.senderId === userData?.id ? userData?.avatar : selectedUser?.avatar}
-            onEdit={editMessage}
-            onDelete={deleteMessage}
-            onReply={handleReply}
-            onForward={handleForward}
-          />
-        ))}
+        {messages.map((message) => {
+          const isOwn = message.senderId === userData?.id;
+          let senderName = 'Unknown';
+          let senderAvatar = '';
+          
+          if (isOwn) {
+            senderName = userData?.username || 'You';
+            senderAvatar = userData?.avatar || '';
+          } else if (isGroupChat) {
+            // For group messages, we need to get the sender's name from the message or find it in the group members
+            // For now, we'll use a placeholder - this would need to be enhanced with member data
+            senderName = message.senderId; // This should be replaced with actual sender name lookup
+            senderAvatar = '';
+          } else {
+            senderName = selectedUser?.username || 'Unknown';
+            senderAvatar = selectedUser?.avatar || '';
+          }
+          
+          return (
+            <MessageBubble
+              key={message.id}
+              message={message}
+              isOwn={isOwn}
+              senderName={senderName}
+              senderAvatar={senderAvatar}
+              onEdit={isGroupChat ? editGroupMessage : editMessage}
+              onDelete={isGroupChat ? deleteGroupMessage : deleteMessage}
+              onReply={handleReply}
+              onForward={handleForward}
+            />
+          );
+        })}
         <div ref={messagesEndRef} />
       </div>
 
@@ -267,23 +373,27 @@ export const ChatWindow: React.FC = () => {
           disabled={false}
           replyingTo={replyingTo}
           onCancelReply={handleCancelReply}
-          enableGlobalTyping={!!selectedUserId}
+          enableGlobalTyping={!!(selectedUserId || selectedGroupId)}
         />
       </div>
 
       {/* Chat Info Modal */}
-      {selectedUser && (
+      {(selectedUser || selectedGroup) && (
         <ChatInfoModal
           isOpen={isChatInfoOpen}
           onClose={() => setIsChatInfoOpen(false)}
-          user={{
+          user={selectedUser ? {
             username: selectedUser.username,
             email: selectedUser.email,
             avatar: selectedUser.avatar,
+          } : {
+            username: selectedGroup!.groupName,
+            email: `${selectedGroup!.memberCount} members`,
+            avatar: selectedGroup!.groupAvatar,
           }}
           messages={messages}
           currentUserId={userData?.id || ''}
-          lastMessageTime={selectedUser.lastMessageTime}
+          lastMessageTime={selectedUser?.lastMessageTime || selectedGroup?.lastMessageTime}
         />
       )}
 
@@ -292,10 +402,32 @@ export const ChatWindow: React.FC = () => {
         isOpen={!!forwardingMessage}
         onClose={handleCancelForward}
         message={forwardingMessage}
-        conversations={conversations}
+        conversations={[...conversations, ...groupConversations.map(gc => ({
+          id: gc.groupId,
+          userId: gc.groupId,
+          username: gc.groupName,
+          email: `${gc.memberCount} members`,
+          avatar: gc.groupAvatar,
+          lastMessage: gc.lastMessage,
+          lastMessageTime: gc.lastMessageTime,
+          lastMessageSeen: gc.lastMessageSeen,
+          unreadCount: gc.unreadCount,
+          isOnline: false
+        }))]}
         currentUserId={userData?.id || ''}
         onForward={handleForwardMessage}
       />
+
+      {/* Add Members Modal */}
+      {selectedGroup && (
+        <AddMembersModal
+          isOpen={isAddMembersOpen}
+          onClose={() => setIsAddMembersOpen(false)}
+          groupId={selectedGroupId!}
+          currentMembers={[]} // TODO: Get current members from group data
+          onMembersAdded={handleMembersAdded}
+        />
+      )}
     </div>
   );
 };

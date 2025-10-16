@@ -18,7 +18,7 @@ export default function ChatPage() {
   const router = useRouter();
   const { user, userData, isLoading } = useAuth();
   const { users } = useUsers(userData?.id || '');
-  const { selectedUserId, conversations, setSelectedUserId } = useChatStore();
+  const { selectedUserId, selectedGroupId, conversations, groupConversations, setSelectedUserId, setSelectedGroupId } = useChatStore();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true); // Start with sidebar open on mobile
   
   // Initialize online status tracking
@@ -37,26 +37,27 @@ export default function ChatPage() {
   // On mobile: show sidebar by default, hide when chat is selected
   useEffect(() => {
     if (window.innerWidth < 768) {
-      if (selectedUserId) {
+      if (selectedUserId || selectedGroupId) {
         setIsSidebarOpen(false); // Hide sidebar when chat is selected
       } else {
         setIsSidebarOpen(true); // Show sidebar when no chat is selected
       }
     }
-  }, [selectedUserId]);
+  }, [selectedUserId, selectedGroupId]);
 
   // Handle browser back button on mobile
   useEffect(() => {
     const handlePopState = () => {
-      if (window.innerWidth < 768 && selectedUserId) {
+      if (window.innerWidth < 768 && (selectedUserId || selectedGroupId)) {
         setSelectedUserId(null);
+        setSelectedGroupId(null);
         setIsSidebarOpen(true);
       }
     };
 
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, [selectedUserId, setSelectedUserId]);
+  }, [selectedUserId, selectedGroupId, setSelectedUserId, setSelectedGroupId]);
 
   if (isLoading) {
     return (
@@ -77,15 +78,16 @@ export default function ChatPage() {
     <div className="h-screen flex bg-gray-50 relative">
       {/* Mobile Header */}
       <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
-        {selectedUserId ? (
-          // Chat mode: Show back button and user info
+        {selectedUserId || selectedGroupId ? (
+          // Chat mode: Show back button and chat info
           <>
             <button
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                console.log('Back button clicked - current user:', user, 'selectedUserId:', selectedUserId);
+                console.log('Back button clicked - current user:', user, 'selectedUserId:', selectedUserId, 'selectedGroupId:', selectedGroupId);
                 setSelectedUserId(null);
+                setSelectedGroupId(null);
                 setIsSidebarOpen(true);
               }}
               className="p-2 text-gray-600 hover:text-gray-900"
@@ -95,7 +97,10 @@ export default function ChatPage() {
             <div className="flex items-center space-x-2 min-w-0 flex-1">
               <div className="w-8 h-8 bg-gray-200 rounded-full flex-shrink-0"></div>
               <h1 className="text-lg font-semibold text-gray-900 truncate">
-                {conversations.find(user => user.userId === selectedUserId)?.username || 'Chat'}
+                {selectedUserId 
+                  ? conversations.find(user => user.userId === selectedUserId)?.username || 'Chat'
+                  : groupConversations.find(group => group.groupId === selectedGroupId)?.groupName || 'Group'
+                }
               </h1>
             </div>
             <div className="w-8" /> {/* Spacer for centering */}
@@ -127,7 +132,7 @@ export default function ChatPage() {
       </div>
 
       {/* Overlay for mobile - only show when sidebar is open and no chat is selected */}
-      {isSidebarOpen && !selectedUserId && (
+      {isSidebarOpen && !selectedUserId && !selectedGroupId && (
         <div 
           className="md:hidden fixed inset-0 bg-black bg-opacity-50 z-30"
           onClick={() => setIsSidebarOpen(false)}
@@ -137,7 +142,7 @@ export default function ChatPage() {
       {/* Chat Window - Mobile: Show when chat is selected, hide when sidebar is shown */}
       <div className={`
         flex-1 flex flex-col pt-16 md:pt-0 h-full md:h-screen
-        ${selectedUserId ? 'block' : 'hidden md:flex'}
+        ${(selectedUserId || selectedGroupId) ? 'block' : 'hidden md:flex'}
       `}>
         <ChatWindow />
       </div>
