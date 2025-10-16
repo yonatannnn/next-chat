@@ -93,13 +93,9 @@ export default function ChatPage() {
                 e.preventDefault();
                 e.stopPropagation();
                 console.log('Back button clicked - current user:', user, 'selectedUserId:', selectedUserId, 'selectedGroupId:', selectedGroupId);
-                // Clear selected chat and ensure sidebar shows on mobile
+                // Clear selected chat - the useEffect will handle showing the sidebar
                 setSelectedUserId(null);
                 setSelectedGroupId(null);
-                // Force sidebar to show on mobile
-                if (window.innerWidth < 768) {
-                  setIsSidebarOpen(true);
-                }
               }}
               className="p-2 text-gray-600 hover:text-gray-900"
             >
