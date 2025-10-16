@@ -9,11 +9,11 @@ import { useAuthStore } from '@/features/auth/store/authStore';
 import { useConversations } from '@/features/chat/hooks/useConversations';
 import { useGroupConversations } from '@/features/chat/hooks/useGroupConversations';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
-import { LogOut, MessageCircle, Settings, Search, X, Bell, Users, Plus } from 'lucide-react';
+import { LogOut, MessageCircle, Settings, Search, X, Bell, Users, Plus, Eye, EyeOff, Archive, AlertTriangle, Lock } from 'lucide-react';
 
 export const Sidebar: React.FC = () => {
   const router = useRouter();
-  const { selectedUserId, selectedGroupId, setSelectedUserId, setSelectedGroupId, addConversation } = useChatStore();
+  const { selectedUserId, selectedGroupId, setSelectedUserId, setSelectedGroupId, addConversation, hideConversation, unhideConversation, hardHideConversation, unhideHardHiddenConversation, updateConversationsPreservingStates } = useChatStore();
   const { userData, logout } = useAuthStore();
   const { conversations, searchUsers, markAsRead, markAsSeen } = useConversations(userData?.id || '');
   const { groupConversations, markGroupAsRead, markGroupAsSeen } = useGroupConversations(userData?.id || '');
@@ -25,6 +25,11 @@ export const Sidebar: React.FC = () => {
   const [isCreateGroupOpen, setIsCreateGroupOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'chats' | 'groups'>('chats');
   const [isNavigatingToSettings, setIsNavigatingToSettings] = useState(false);
+  const [showHidden, setShowHidden] = useState(false);
+  const [avatarClickCount, setAvatarClickCount] = useState(0);
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+  const [password, setPassword] = useState('');
+  const [showHardHiddenChats, setShowHardHiddenChats] = useState(false);
 
   const handleSettingsNavigation = async () => {
     setIsNavigatingToSettings(true);
@@ -38,6 +43,32 @@ export const Sidebar: React.FC = () => {
       console.error('Navigation error:', error);
       setIsNavigatingToSettings(false);
     }
+  };
+
+
+  const handleAvatarClick = () => {
+    setAvatarClickCount(prev => prev + 1);
+    
+    if (avatarClickCount >= 4) { // 5 clicks total (0-indexed)
+      setShowPasswordDialog(true);
+      setAvatarClickCount(0);
+    }
+  };
+
+  const handlePasswordSubmit = () => {
+    // Simple password check - you can make this more secure
+    if (password === 'unhide123') {
+      setShowHardHiddenChats(true);
+      setShowPasswordDialog(false);
+      setPassword('');
+    } else {
+      alert('Incorrect password!');
+      setPassword('');
+    }
+  };
+
+  const handleUnhideHardHidden = (userId: string) => {
+    unhideHardHiddenConversation(userId);
   };
 
   // Reset loading state when component unmounts or after a delay
@@ -114,7 +145,15 @@ export const Sidebar: React.FC = () => {
     return date.toLocaleDateString();
   };
 
-  const displayList = searchQuery.trim() ? searchResults : (activeTab === 'chats' ? conversations : groupConversations);
+  // Filter conversations based on hidden status (exclude hard-hidden from both lists)
+  const filteredConversations = showHidden 
+    ? conversations.filter(conv => !conv.hardHidden) // Show hidden but not hard-hidden
+    : conversations.filter(conv => !conv.hidden && !conv.hardHidden); // Show normal chats only
+  
+  // Get hard-hidden conversations separately
+  const hardHiddenConversations = conversations.filter(conv => conv.hardHidden);
+  
+  const displayList = searchQuery.trim() ? searchResults : (activeTab === 'chats' ? filteredConversations : groupConversations);
 
   return (
     <div className="w-full bg-white border-r border-gray-200 flex flex-col h-full">
@@ -122,11 +161,17 @@ export const Sidebar: React.FC = () => {
       <div className="flex-shrink-0 p-3 md:p-4 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3 min-w-0 flex-1">
-              <Avatar
-                src={userData?.avatar}
-                alt={userData?.username || 'User'}
-                size="md"
-              />
+              <button
+                onClick={handleAvatarClick}
+                className="flex-shrink-0 hover:opacity-80 transition-opacity"
+                title="Click setting icon"
+              >
+                <Avatar
+                  src={userData?.avatar}
+                  alt={userData?.username || 'User'}
+                  size="md"
+                />
+              </button>
               <div className="min-w-0 flex-1">
                 <h2 className="font-semibold text-gray-900 truncate">{userData?.username}</h2>
               </div>
@@ -229,9 +274,21 @@ export const Sidebar: React.FC = () => {
       {/* Users List - Scrollable */}
       <div className="flex-1 overflow-y-auto min-h-0">
         <div className="p-3 md:p-4">
-          <h3 className="text-sm font-medium text-gray-500 mb-3">
-            {searchQuery.trim() ? 'Search Results' : (activeTab === 'chats' ? 'Conversations' : 'Groups')}
-          </h3>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-medium text-gray-500">
+              {searchQuery.trim() ? 'Search Results' : (activeTab === 'chats' ? 'Conversations' : 'Groups')}
+            </h3>
+            {activeTab === 'chats' && !searchQuery.trim() && (
+              <button
+                onClick={() => setShowHidden(!showHidden)}
+                className="flex items-center space-x-1 text-xs text-gray-500 hover:text-gray-700 transition-colors"
+                title={showHidden ? 'Hide archived chats' : 'Show archived chats'}
+              >
+                {showHidden ? <EyeOff size={14} /> : <Archive size={14} />}
+                <span>{showHidden ? 'Hide' : 'Archived'}</span>
+              </button>
+            )}
+          </div>
           <div className="space-y-1 md:space-y-2">
             {isSearching ? (
               <div className="flex items-center justify-center py-6 md:py-8">
@@ -261,15 +318,18 @@ export const Sidebar: React.FC = () => {
                 const isSelected = isGroup ? selectedGroupId === item.groupId : selectedUserId === item.userId;
                 
                 return (
-                  <button
+                  <div
                     key={isGroup ? item.groupId : item.userId}
-                    onClick={() => isGroup ? handleGroupSelect(item.groupId) : handleUserSelect(item.userId)}
-                    className={`w-full flex items-center space-x-2 md:space-x-3 p-2 md:p-3 rounded-lg transition-colors ${
+                    className={`group relative w-full flex items-center space-x-2 md:space-x-3 p-2 md:p-3 rounded-lg transition-colors ${
                       isSelected
                         ? 'bg-blue-50 border border-blue-200'
                         : 'hover:bg-gray-50'
                     }`}
                   >
+                    <button
+                      onClick={() => isGroup ? handleGroupSelect(item.groupId) : handleUserSelect(item.userId)}
+                      className="flex-1 flex items-center space-x-2 md:space-x-3 min-w-0"
+                    >
                     <div className="relative flex-shrink-0">
                       <Avatar
                         src={isGroup ? item.groupAvatar : item.avatar}
@@ -306,12 +366,14 @@ export const Sidebar: React.FC = () => {
                         </p>
                       )}
                     </div>
-                    {isGroup ? (
-                      <Users size={14} className="text-gray-400 flex-shrink-0 md:w-4 md:h-4" />
-                    ) : (
-                      <MessageCircle size={14} className="text-gray-400 flex-shrink-0 md:w-4 md:h-4" />
-                    )}
-                  </button>
+                      {isGroup ? (
+                        <Users size={14} className="text-gray-400 flex-shrink-0 md:w-4 md:h-4" />
+                      ) : (
+                        <MessageCircle size={14} className="text-gray-400 flex-shrink-0 md:w-4 md:h-4" />
+                      )}
+                    </button>
+                    
+                  </div>
                 );
               })
             )}
@@ -330,6 +392,115 @@ export const Sidebar: React.FC = () => {
         isOpen={isCreateGroupOpen}
         onClose={() => setIsCreateGroupOpen(false)}
       />
+
+
+      {/* Password Dialog */}
+      {showPasswordDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md mx-4">
+            <div className="flex items-center space-x-3 mb-4">
+              <div className="bg-blue-100 p-2 rounded-full">
+                <Lock size={24} className="text-blue-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900">Access Hard-Hidden Chats</h3>
+            </div>
+            
+            <div className="mb-6">
+              <p className="text-gray-600 mb-4">
+                Enter password to access hard-hidden conversations:
+              </p>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter password"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                onKeyDown={(e) => e.key === 'Enter' && handlePasswordSubmit()}
+              />
+            </div>
+            
+            <div className="flex space-x-3">
+              <button
+                onClick={() => {
+                  setShowPasswordDialog(false);
+                  setPassword('');
+                }}
+                className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handlePasswordSubmit}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg transition-colors"
+              >
+                Access
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Hard-Hidden Chats Section */}
+      {showHardHiddenChats && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-2xl mx-4 max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center space-x-3">
+                <div className="bg-red-100 p-2 rounded-full">
+                  <Lock size={24} className="text-red-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900">Hard-Hidden Chats</h3>
+              </div>
+              <button
+                onClick={() => setShowHardHiddenChats(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X size={24} />
+              </button>
+            </div>
+            
+            <div className="mb-4">
+              <p className="text-gray-600">
+                These conversations are hard-hidden and require password access to unhide.
+              </p>
+            </div>
+            
+            {hardHiddenConversations.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <Lock size={48} className="mx-auto mb-4 text-gray-300" />
+                <p>No hard-hidden conversations found.</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {hardHiddenConversations.map((conv) => (
+                  <div
+                    key={conv.userId}
+                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                  >
+                    <div className="flex items-center space-x-3">
+                      <Avatar
+                        src={conv.avatar}
+                        alt={conv.username}
+                        size="sm"
+                      />
+                      <div>
+                        <h4 className="font-medium text-gray-900">{conv.username}</h4>
+                        <p className="text-sm text-gray-500">{conv.email}</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleUnhideHardHidden(conv.userId)}
+                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                    >
+                      Unhide
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

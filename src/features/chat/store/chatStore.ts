@@ -38,6 +38,8 @@ export interface Conversation {
   lastMessageSeen?: boolean;
   unreadCount: number;
   isOnline?: boolean;
+  hidden?: boolean;
+  hardHidden?: boolean;
 }
 
 export interface Group {
@@ -91,6 +93,7 @@ interface ChatState {
   deleteMessage: (messageId: string) => void;
   deleteAllMessages: (userId1: string, userId2: string) => void;
   setConversations: (conversations: Conversation[]) => void;
+  updateConversationsPreservingStates: (newConversations: Conversation[]) => void;
   addConversation: (conversation: Conversation) => void;
   updateConversation: (userId: string, updates: Partial<Conversation>) => void;
   setGroupConversations: (groupConversations: GroupConversation[]) => void;
@@ -109,6 +112,10 @@ interface ChatState {
   clearMessages: () => void;
   setReplyingTo: (message: Message | null) => void;
   setForwardingMessage: (message: Message | null) => void;
+  hideConversation: (userId: string) => void;
+  unhideConversation: (userId: string) => void;
+  hardHideConversation: (userId: string) => void;
+  unhideHardHiddenConversation: (userId: string) => void;
 }
 
 export const useChatStore = create<ChatState>((set) => ({
@@ -143,6 +150,28 @@ export const useChatStore = create<ChatState>((set) => ({
     )
   })),
   setConversations: (conversations) => set({ conversations }),
+  updateConversationsPreservingStates: (newConversations) => set((state) => {
+    // Create a map of existing conversations to preserve hidden/hardHidden states
+    const existingConversationsMap = new Map(
+      state.conversations.map(conv => [conv.userId, conv])
+    );
+    
+    // Update conversations while preserving hidden/hardHidden states
+    const updatedConversations = newConversations.map(newConv => {
+      const existingConv = existingConversationsMap.get(newConv.userId);
+      if (existingConv) {
+        // Preserve hidden and hardHidden states from existing conversation
+        return {
+          ...newConv,
+          hidden: existingConv.hidden,
+          hardHidden: existingConv.hardHidden
+        };
+      }
+      return newConv;
+    });
+    
+    return { conversations: updatedConversations };
+  }),
   addConversation: (conversation) => set((state) => {
     // Check if conversation already exists
     const exists = state.conversations.find(conv => conv.userId === conversation.userId);
@@ -233,4 +262,24 @@ export const useChatStore = create<ChatState>((set) => ({
   clearMessages: () => set({ messages: [] }),
   setReplyingTo: (replyingTo) => set({ replyingTo }),
   setForwardingMessage: (forwardingMessage) => set({ forwardingMessage }),
+  hideConversation: (userId) => set((state) => ({
+    conversations: state.conversations.map(conv => 
+      conv.userId === userId ? { ...conv, hidden: true } : conv
+    )
+  })),
+  unhideConversation: (userId) => set((state) => ({
+    conversations: state.conversations.map(conv => 
+      conv.userId === userId ? { ...conv, hidden: false } : conv
+    )
+  })),
+  hardHideConversation: (userId) => set((state) => ({
+    conversations: state.conversations.map(conv => 
+      conv.userId === userId ? { ...conv, hardHidden: true, hidden: false } : conv
+    )
+  })),
+  unhideHardHiddenConversation: (userId) => set((state) => ({
+    conversations: state.conversations.map(conv => 
+      conv.userId === userId ? { ...conv, hardHidden: false, hidden: false } : conv
+    )
+  })),
 }));

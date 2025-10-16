@@ -6,6 +6,7 @@ export const useConversations = (currentUserId: string) => {
   const { 
     conversations, 
     setConversations, 
+    updateConversationsPreservingStates,
     setLoading, 
     setError,
     searchQuery,
@@ -23,7 +24,7 @@ export const useConversations = (currentUserId: string) => {
     const unsubscribe = improvedConversationService.subscribeToConversations(
       currentUserId, 
       (newConversations) => {
-        setConversations(newConversations);
+        updateConversationsPreservingStates(newConversations);
         setLoading(false);
       }
     );

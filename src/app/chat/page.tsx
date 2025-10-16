@@ -13,7 +13,7 @@ import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { DropdownMenu } from '@/components/ui/DropdownMenu';
 import { Avatar } from '@/components/ui/Avatar';
 import { ChatInfoModal } from '@/components/ui/ChatInfoModal';
-import { Menu, X, Info, Users, Trash2, Search } from 'lucide-react';
+import { Menu, X, Info, Users, Trash2, Search, EyeOff, Lock, AlertTriangle } from 'lucide-react';
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
@@ -22,17 +22,44 @@ export default function ChatPage() {
   const router = useRouter();
   const { user, userData, isLoading } = useAuth();
   const { users } = useUsers(userData?.id || '');
-  const { selectedUserId, selectedGroupId, conversations, groupConversations, setSelectedUserId, setSelectedGroupId } = useChatStore();
+  const { selectedUserId, selectedGroupId, conversations, groupConversations, setSelectedUserId, setSelectedGroupId, hideConversation, hardHideConversation } = useChatStore();
   const { messages } = useChat(userData?.id || '', selectedUserId);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true); // Start with sidebar open on mobile
   const [isChatInfoOpen, setIsChatInfoOpen] = useState(false);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
+  const [showHardHideConfirm, setShowHardHideConfirm] = useState(false);
   
   // Initialize online status tracking
   const { isOnline, allStatuses } = useOnlineStatus(userData?.id);
   
   // Initialize global notifications
   useGlobalNotifications();
+
+  // Handle hide and hard hide functions
+  const handleHideChat = () => {
+    if (selectedUserId) {
+      hideConversation(selectedUserId);
+      setSelectedUserId(null);
+      setIsSidebarOpen(true);
+    }
+  };
+
+  const handleHardHideChat = () => {
+    setShowHardHideConfirm(true);
+  };
+
+  const confirmHardHide = () => {
+    if (selectedUserId) {
+      hardHideConversation(selectedUserId);
+      setSelectedUserId(null);
+      setIsSidebarOpen(true);
+      setShowHardHideConfirm(false);
+    }
+  };
+
+  const cancelHardHide = () => {
+    setShowHardHideConfirm(false);
+  };
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -224,15 +251,30 @@ export default function ChatPage() {
                     },
                     variant: 'danger' as const,
                   }
-                ] : [{
-                  id: 'delete-chat',
-                  label: 'Delete Chat',
-                  icon: <Trash2 size={16} />,
-                  onClick: () => {
-                    console.log('Delete chat clicked');
+                ] : [
+                  {
+                    id: 'hide-chat',
+                    label: 'Hide Chat',
+                    icon: <EyeOff size={16} />,
+                    onClick: handleHideChat,
                   },
-                  variant: 'danger' as const,
-                }]),
+                  {
+                    id: 'hard-hide-chat',
+                    label: 'Hard Hide Chat',
+                    icon: <Lock size={16} />,
+                    onClick: handleHardHideChat,
+                    variant: 'danger' as const,
+                  },
+                  {
+                    id: 'delete-chat',
+                    label: 'Delete Chat',
+                    icon: <Trash2 size={16} />,
+                    onClick: () => {
+                      console.log('Delete chat clicked');
+                    },
+                    variant: 'danger' as const,
+                  }
+                ]),
               ]} />
             </div>
           </>
@@ -295,6 +337,54 @@ export default function ChatPage() {
           currentUserId={userData?.id || ''}
           lastMessageTime={messages.length > 0 ? messages[messages.length - 1]?.timestamp : undefined}
         />
+      )}
+
+      {/* Hard Hide Confirmation Modal */}
+      {showHardHideConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md mx-4">
+            <div className="flex items-center space-x-3 mb-4">
+              <div className="bg-red-100 p-2 rounded-full">
+                <AlertTriangle size={24} className="text-red-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900">Hard Hide Chat</h3>
+            </div>
+            
+            <div className="mb-6">
+              <p className="text-gray-600 mb-3">
+                This will <strong>hard hide</strong> the conversation, removing it from both chat list and archived list.
+              </p>
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                <div className="flex items-start space-x-2">
+                  <Lock size={16} className="text-yellow-600 mt-0.5 flex-shrink-0" />
+                  <div className="text-sm text-yellow-800">
+                    <p className="font-medium mb-1">Warning:</p>
+                    <ul className="list-disc list-inside space-y-1 text-xs">
+                      <li>Chat will be completely removed from all lists</li>
+                      <li>Password required to access and unhide</li>
+                      <li>Click your profile avatar 5 times to access</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex space-x-3">
+              <button
+                onClick={cancelHardHide}
+                className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmHardHide}
+                className="flex-1 px-4 py-2 bg-red-600 text-white hover:bg-red-700 rounded-lg transition-colors"
+              >
+                Hard Hide
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

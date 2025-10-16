@@ -18,7 +18,7 @@ import { ForwardMessageModal } from '@/components/ui/ForwardMessageModal';
 import { AddMembersModal } from '@/components/ui/AddMembersModal';
 import { ProfileRecommendationBubble } from '@/components/ui/ProfileRecommendationBubble';
 import { useRecommendations } from '@/features/profile/hooks/useRecommendations';
-import { Trash2, Info, Users, Search, X, ChevronUp, ChevronDown } from 'lucide-react';
+import { Trash2, Info, Users, Search, X, ChevronUp, ChevronDown, EyeOff, Lock, AlertTriangle } from 'lucide-react';
 
 interface ChatWindowProps {
   isMobileSearchOpen?: boolean;
@@ -30,7 +30,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   setIsMobileSearchOpen 
 }) => {
   const router = useRouter();
-  const { selectedUserId, selectedGroupId, messages, conversations, groupConversations, setSelectedUserId, setSelectedGroupId, replyingTo, setReplyingTo, forwardingMessage, setForwardingMessage, markMessageAsSeen, updateConversation, updateGroupConversation } = useChatStore();
+  const { selectedUserId, selectedGroupId, messages, conversations, groupConversations, setSelectedUserId, setSelectedGroupId, replyingTo, setReplyingTo, forwardingMessage, setForwardingMessage, markMessageAsSeen, updateConversation, updateGroupConversation, hideConversation, hardHideConversation } = useChatStore();
   const { userData } = useAuthStore();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { markAsRead, markAsSeen } = useConversations(userData?.id || '');
@@ -47,6 +47,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   const [isAddMembersOpen, setIsAddMembersOpen] = useState(false);
   const [previousMessageCount, setPreviousMessageCount] = useState(0);
   const [processingRecommendation, setProcessingRecommendation] = useState<string | null>(null);
+  const [showHardHideConfirm, setShowHardHideConfirm] = useState(false);
 
   // Handle mobile search state
   useEffect(() => {
@@ -326,6 +327,29 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     }
   };
 
+  const handleHideChat = () => {
+    if (selectedUserId) {
+      hideConversation(selectedUserId);
+      setSelectedUserId(null);
+    }
+  };
+
+  const handleHardHideChat = () => {
+    setShowHardHideConfirm(true);
+  };
+
+  const confirmHardHide = () => {
+    if (selectedUserId) {
+      hardHideConversation(selectedUserId);
+      setSelectedUserId(null);
+      setShowHardHideConfirm(false);
+    }
+  };
+
+  const cancelHardHide = () => {
+    setShowHardHideConfirm(false);
+  };
+
   const handleChatInfo = () => {
     setIsChatInfoOpen(true);
   };
@@ -472,13 +496,28 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         onClick: handleDeleteGroup,
         variant: 'danger' as const,
       }
-    ] : [{
-      id: 'delete-chat',
-      label: 'Delete Chat',
-      icon: <Trash2 size={16} />,
-      onClick: handleDeleteChat,
-      variant: 'danger' as const,
-    }]),
+    ] : [
+      {
+        id: 'hide-chat',
+        label: 'Hide Chat',
+        icon: <EyeOff size={16} />,
+        onClick: handleHideChat,
+      },
+      {
+        id: 'hard-hide-chat',
+        label: 'Hard Hide Chat',
+        icon: <Lock size={16} />,
+        onClick: handleHardHideChat,
+        variant: 'danger' as const,
+      },
+      {
+        id: 'delete-chat',
+        label: 'Delete Chat',
+        icon: <Trash2 size={16} />,
+        onClick: handleDeleteChat,
+        variant: 'danger' as const,
+      }
+    ]),
   ];
 
   if (!selectedUserId && !selectedGroupId) {
@@ -715,6 +754,54 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           currentMembers={[]} // TODO: Get current members from group data
           onMembersAdded={handleMembersAdded}
         />
+      )}
+
+      {/* Hard Hide Confirmation Modal */}
+      {showHardHideConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md mx-4">
+            <div className="flex items-center space-x-3 mb-4">
+              <div className="bg-red-100 p-2 rounded-full">
+                <AlertTriangle size={24} className="text-red-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900">Hard Hide Chat</h3>
+            </div>
+            
+            <div className="mb-6">
+              <p className="text-gray-600 mb-3">
+                This will <strong>hard hide</strong> the conversation, removing it from both chat list and archived list.
+              </p>
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                <div className="flex items-start space-x-2">
+                  <Lock size={16} className="text-yellow-600 mt-0.5 flex-shrink-0" />
+                  <div className="text-sm text-yellow-800">
+                    <p className="font-medium mb-1">Warning:</p>
+                    <ul className="list-disc list-inside space-y-1 text-xs">
+                      <li>Chat will be completely removed from all lists</li>
+                      <li>Password required to access and unhide</li>
+                      <li>Click your profile avatar 5 times to access</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex space-x-3">
+              <button
+                onClick={cancelHardHide}
+                className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmHardHide}
+                className="flex-1 px-4 py-2 bg-red-600 text-white hover:bg-red-700 rounded-lg transition-colors"
+              >
+                Hard Hide
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
