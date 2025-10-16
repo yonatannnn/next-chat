@@ -27,6 +27,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   onReply,
   onForward,
 }) => {
+  const isSystemMessage = message.senderId === 'system';
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(message.text);
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
@@ -153,6 +154,18 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
+
+  // System message styling
+  if (isSystemMessage) {
+    console.log('Rendering system message:', message);
+    return (
+      <div className="flex justify-center mb-3 md:mb-4">
+        <div className="bg-gray-200 text-gray-600 text-sm px-3 py-2 rounded-full max-w-xs text-center">
+          {message.text}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`flex ${isOwn ? 'justify-end' : 'justify-start'} mb-3 md:mb-4`}>

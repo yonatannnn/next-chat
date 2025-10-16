@@ -7,8 +7,10 @@ import { useUsers } from '@/features/users/hooks/useUsers';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
-import { ArrowLeft, User, Mail, Calendar, CheckCircle, MessageCircle } from 'lucide-react';
+import { ArrowLeft, User, Mail, Calendar, CheckCircle, MessageCircle, Camera } from 'lucide-react';
 import { ImageModal } from '@/components/ui/ImageModal';
+import { RecommendProfileModal } from '@/components/ui/RecommendProfileModal';
+import { useRecommendations } from '@/features/profile/hooks/useRecommendations';
 import { formatTimestamp } from '@/utils/formatTimestamp';
 
 export default function FriendProfilePage() {
@@ -17,8 +19,10 @@ export default function FriendProfilePage() {
   const { userData } = useAuth();
   const { users } = useUsers(userData?.id || '');
   const { allStatuses } = useOnlineStatus(userData?.id);
+  const { sendRecommendation } = useRecommendations(userData?.id || '');
   const [friend, setFriend] = useState<any>(null);
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+  const [isRecommendModalOpen, setIsRecommendModalOpen] = useState(false);
 
   useEffect(() => {
     if (params?.id && users.length > 0) {
@@ -59,6 +63,11 @@ export default function FriendProfilePage() {
 
   const handleStartChat = () => {
     router.push(`/chat?user=${friend?.id}`);
+  };
+
+  const handleRecommendProfile = async (imageUrl: string, message?: string) => {
+    if (!friend?.id) return;
+    await sendRecommendation(friend.id, imageUrl, message);
   };
 
   if (!friend) {
@@ -203,6 +212,14 @@ export default function FriendProfilePage() {
                 Back to Chat
               </Button>
               <Button
+                variant="outline"
+                onClick={() => setIsRecommendModalOpen(true)}
+                className="flex items-center justify-center space-x-2 w-full sm:w-auto"
+              >
+                <Camera size={16} />
+                <span>Recommend Profile</span>
+              </Button>
+              <Button
                 onClick={handleStartChat}
                 className="flex items-center justify-center space-x-2 w-full sm:w-auto"
               >
@@ -220,6 +237,16 @@ export default function FriendProfilePage() {
           src={friend.avatar}
           alt={friend.username}
           onClose={() => setIsImageModalOpen(false)}
+        />
+      )}
+
+      {/* Recommend Profile Modal */}
+      {isRecommendModalOpen && (
+        <RecommendProfileModal
+          isOpen={isRecommendModalOpen}
+          onClose={() => setIsRecommendModalOpen(false)}
+          friendName={friend.username}
+          onSendRecommendation={handleRecommendProfile}
         />
       )}
     </div>

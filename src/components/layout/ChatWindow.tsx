@@ -16,6 +16,8 @@ import { groupChatService } from '@/features/chat/services/groupChatService';
 import { supabase } from '@/lib/supabase';
 import { ForwardMessageModal } from '@/components/ui/ForwardMessageModal';
 import { AddMembersModal } from '@/components/ui/AddMembersModal';
+import { ProfileRecommendationBubble } from '@/components/ui/ProfileRecommendationBubble';
+import { useRecommendations } from '@/features/profile/hooks/useRecommendations';
 import { Trash2, Info, Users } from 'lucide-react';
 
 export const ChatWindow: React.FC = () => {
@@ -25,10 +27,12 @@ export const ChatWindow: React.FC = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { markAsRead, markAsSeen } = useConversations(userData?.id || '');
   const { markGroupAsRead, markGroupAsSeen } = useGroupConversations(userData?.id || '');
+  const { recommendations, acceptRecommendation, rejectRecommendation, deleteRecommendation } = useRecommendations(userData?.id || '');
   const [isChatInfoOpen, setIsChatInfoOpen] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [isAddMembersOpen, setIsAddMembersOpen] = useState(false);
   const [previousMessageCount, setPreviousMessageCount] = useState(0);
+  const [processingRecommendation, setProcessingRecommendation] = useState<string | null>(null);
 
   const { sendMessage, editMessage, deleteMessage, deleteAllMessages, forwardMessage, sendVoiceMessage } = useChat(userData?.id || '', selectedUserId);
   const { sendMessage: sendGroupMessage, editMessage: editGroupMessage, deleteMessage: deleteGroupMessage, sendVoiceMessage: sendGroupVoiceMessage } = useGroupChat(userData?.id || '', selectedGroupId);
@@ -235,6 +239,58 @@ export const ChatWindow: React.FC = () => {
     console.log('Members added successfully');
   };
 
+  const handleAcceptRecommendation = async (recommendationId: string) => {
+    setProcessingRecommendation(recommendationId);
+    try {
+      await acceptRecommendation(recommendationId);
+      
+      // Send personal message to recommender
+      console.log('Sending acceptance message...');
+      if (selectedUserId) {
+        await sendMessage("✅ Profile picture recommendation accepted.");
+      } else if (selectedGroupId) {
+        await sendGroupMessage("✅ Profile picture recommendation accepted.");
+      }
+      console.log('Acceptance message sent');
+    } catch (error) {
+      console.error('Error accepting recommendation:', error);
+    } finally {
+      setProcessingRecommendation(null);
+    }
+  };
+
+  const handleRejectRecommendation = async (recommendationId: string) => {
+    setProcessingRecommendation(recommendationId);
+    try {
+      await rejectRecommendation(recommendationId);
+      
+      // Send personal message to recommender
+      console.log('Sending rejection message...');
+      if (selectedUserId) {
+        await sendMessage("❌ Profile picture recommendation rejected.");
+      } else if (selectedGroupId) {
+        await sendGroupMessage("❌ Profile picture recommendation rejected.");
+      }
+      console.log('Rejection message sent');
+    } catch (error) {
+      console.error('Error rejecting recommendation:', error);
+    } finally {
+      setProcessingRecommendation(null);
+    }
+  };
+
+  const handleDeleteRecommendation = async (recommendationId: string) => {
+    setProcessingRecommendation(recommendationId);
+    try {
+      await deleteRecommendation(recommendationId);
+    } catch (error) {
+      console.error('Error deleting recommendation:', error);
+    } finally {
+      setProcessingRecommendation(null);
+    }
+  };
+
+
   const handleSendVoiceMessage = async (audioBlob: Blob, replyTo?: Message) => {
     try {
       if (selectedUserId) {
@@ -328,12 +384,17 @@ export const ChatWindow: React.FC = () => {
 
       {/* Messages - Scrollable */}
       <div className="flex-1 overflow-y-auto min-h-0 p-3 md:p-4 space-y-3 md:space-y-4">
+        {/* Messages */}
         {messages.map((message) => {
           const isOwn = message.senderId === userData?.id;
+          const isSystem = message.senderId === 'system';
           let senderName = 'Unknown';
           let senderAvatar = '';
           
-          if (isOwn) {
+          if (isSystem) {
+            senderName = 'System';
+            senderAvatar = '';
+          } else if (isOwn) {
             senderName = userData?.username || 'You';
             senderAvatar = userData?.avatar || '';
           } else if (isGroupChat) {
@@ -360,6 +421,32 @@ export const ChatWindow: React.FC = () => {
             />
           );
         })}
+        
+        {/* Profile Recommendations - Show only pending recommendations */}
+        {recommendations
+          .filter(rec => 
+            rec.status === 'pending' && (
+              // For individual chats
+              (selectedUserId && (rec.senderId === selectedUserId || rec.receiverId === selectedUserId)) ||
+              // For group chats - show recommendations where current user is sender or receiver
+              (selectedGroupId && (rec.senderId === userData?.id || rec.receiverId === userData?.id))
+            )
+          )
+          .map((recommendation) => {
+            const isOwn = recommendation.senderId === userData?.id;
+            return (
+              <div key={recommendation.id} className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
+                <ProfileRecommendationBubble
+                  recommendation={recommendation}
+                  isOwn={isOwn}
+                  onAccept={handleAcceptRecommendation}
+                  onReject={handleRejectRecommendation}
+                  onDelete={handleDeleteRecommendation}
+                  isProcessing={processingRecommendation === recommendation.id}
+                />
+              </div>
+            );
+          })}
         <div ref={messagesEndRef} />
       </div>
 

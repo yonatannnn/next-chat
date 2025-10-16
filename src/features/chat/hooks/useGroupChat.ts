@@ -40,7 +40,8 @@ export const useGroupChat = (currentUserId: string, selectedGroupId: string | nu
     fileUrls?: string[], 
     replyTo?: any, 
     voiceUrl?: string, 
-    voiceDuration?: number
+    voiceDuration?: number,
+    messageType?: 'system'
   ) => {
     if (!selectedGroupId) return;
     
@@ -53,7 +54,8 @@ export const useGroupChat = (currentUserId: string, selectedGroupId: string | nu
         fileUrls, 
         replyTo, 
         voiceUrl, 
-        voiceDuration
+        voiceDuration,
+        messageType
       );
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : 'An error occurred');

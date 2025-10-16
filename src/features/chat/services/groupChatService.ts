@@ -81,7 +81,8 @@ export const groupChatService = {
     fileUrls?: string[], 
     replyTo?: any, 
     voiceUrl?: string, 
-    voiceDuration?: number
+    voiceDuration?: number,
+    messageType?: 'system'
   ) {
     if (!db) {
       throw new Error('Firebase not initialized');
@@ -90,7 +91,7 @@ export const groupChatService = {
     try {
       const messageData = {
         groupId,
-        senderId,
+        senderId: messageType === 'system' ? 'system' : senderId,
         text,
         fileUrl: fileUrl || null,
         fileUrls: fileUrls || null,
@@ -102,6 +103,7 @@ export const groupChatService = {
         } : null,
         voiceUrl: voiceUrl || null,
         voiceDuration: voiceDuration || null,
+        messageType: messageType || 'user',
       };
       
       await addDoc(collection(db, 'groupMessages'), messageData);

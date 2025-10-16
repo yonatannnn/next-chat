@@ -16,14 +16,14 @@ import { db } from '@/lib/firebase';
 import { Message } from '../store/chatStore';
 
 export const chatService = {
-  async sendMessage(senderId: string, receiverId: string, text: string, fileUrl?: string, fileUrls?: string[], replyTo?: any, voiceUrl?: string, voiceDuration?: number) {
+  async sendMessage(senderId: string, receiverId: string, text: string, fileUrl?: string, fileUrls?: string[], replyTo?: any, voiceUrl?: string, voiceDuration?: number, messageType?: 'system') {
     if (!db) {
       throw new Error('Firebase not initialized');
     }
     
     try {
       const messageData = {
-        senderId,
+        senderId: messageType === 'system' ? 'system' : senderId,
         receiverId,
         text,
         fileUrl: fileUrl || null,
@@ -36,6 +36,7 @@ export const chatService = {
         } : null,
         voiceUrl: voiceUrl || null,
         voiceDuration: voiceDuration || null,
+        messageType: messageType || 'user',
       };
       
       await addDoc(collection(db, 'messages'), messageData);
