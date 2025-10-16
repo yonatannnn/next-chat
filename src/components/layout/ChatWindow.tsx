@@ -48,6 +48,10 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   const [previousMessageCount, setPreviousMessageCount] = useState(0);
   const [processingRecommendation, setProcessingRecommendation] = useState<string | null>(null);
   const [showHardHideConfirm, setShowHardHideConfirm] = useState(false);
+  const [isUserScrolling, setIsUserScrolling] = useState(false);
+  const [scrollTimeout, setScrollTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [lastScrollTop, setLastScrollTop] = useState(0);
+  const [isAtBottom, setIsAtBottom] = useState(true);
 
   // Handle mobile search state
   useEffect(() => {
@@ -56,6 +60,46 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       setIsMobileSearchOpen(false); // Reset mobile state
     }
   }, [isMobileSearchOpen, setIsMobileSearchOpen]);
+
+  // Handle scroll detection to prevent auto-scroll when user is manually scrolling
+  useEffect(() => {
+    const messagesContainer = document.querySelector('.messages-container');
+    if (!messagesContainer) return;
+
+    let scrollTimeoutId: NodeJS.Timeout;
+
+    const handleScroll = () => {
+      const currentScrollTop = messagesContainer.scrollTop;
+      const scrollHeight = messagesContainer.scrollHeight;
+      const clientHeight = messagesContainer.clientHeight;
+      
+      // Check if user is at the bottom (within 10px)
+      const atBottom = currentScrollTop + clientHeight >= scrollHeight - 10;
+      setIsAtBottom(atBottom);
+      
+      // Check if user is scrolling up (away from bottom)
+      if (currentScrollTop < lastScrollTop) {
+        setIsUserScrolling(true);
+      }
+      
+      setLastScrollTop(currentScrollTop);
+      
+      // Clear existing timeout
+      clearTimeout(scrollTimeoutId);
+      
+      // Set a new timeout to reset user scrolling state
+      scrollTimeoutId = setTimeout(() => {
+        setIsUserScrolling(false);
+      }, 2000); // Reset after 2 seconds of no scrolling
+    };
+
+    messagesContainer.addEventListener('scroll', handleScroll, { passive: true });
+    
+    return () => {
+      messagesContainer.removeEventListener('scroll', handleScroll);
+      clearTimeout(scrollTimeoutId);
+    };
+  }, []);
 
   // Search functionality
   const handleSearch = (query: string) => {
@@ -184,27 +228,22 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       } 
       // When new messages are added, check if user is near bottom before scrolling
       else if (messages.length > previousMessageCount) {
-        // Don't auto-scroll if search is active
-        if (isSearchOpen) {
+        // Don't auto-scroll if search is active or user is manually scrolling
+        if (isSearchOpen || isUserScrolling) {
           setPreviousMessageCount(messages.length);
           return;
         }
         
-        const messagesContainer = messagesEndRef.current.parentElement;
-        if (messagesContainer) {
-          const isNearBottom = messagesContainer.scrollTop + messagesContainer.clientHeight >= messagesContainer.scrollHeight - 100;
-          
-          // Only auto-scroll if user is near the bottom (within 100px)
-          if (isNearBottom) {
-            // Use smooth scrolling if enabled, otherwise instant
-            const scrollBehavior = smoothScrollingEnabled ? 'smooth' : 'auto';
-            messagesEndRef.current.scrollIntoView({ behavior: scrollBehavior });
-          }
+        // Only auto-scroll if user is at the bottom and not manually scrolling
+        if (isAtBottom && !isUserScrolling) {
+          // Use smooth scrolling if enabled, otherwise instant
+          const scrollBehavior = smoothScrollingEnabled ? 'smooth' : 'auto';
+          messagesEndRef.current.scrollIntoView({ behavior: scrollBehavior });
         }
       }
       setPreviousMessageCount(messages.length);
     }
-  }, [messages, isInitialLoad, previousMessageCount, smoothScrollingEnabled, isSearchOpen]);
+  }, [messages, isInitialLoad, previousMessageCount, smoothScrollingEnabled, isSearchOpen, isUserScrolling, isAtBottom]);
 
   useEffect(() => {
     if (selectedUserId || selectedGroupId) {
@@ -617,7 +656,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       )}
 
       {/* Messages - Scrollable */}
-      <div className="flex-1 overflow-y-auto min-h-0 p-3 md:p-4 space-y-3 md:space-y-4 pt-4 md:pt-4">
+      <div className="messages-container flex-1 overflow-y-auto min-h-0 p-3 md:p-4 space-y-3 md:space-y-4 pt-4 md:pt-4">
         {/* Messages */}
         {messages.map((message) => {
           const isOwn = message.senderId === userData?.id;
