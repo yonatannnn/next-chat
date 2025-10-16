@@ -21,17 +21,42 @@ export const ChatWindow: React.FC = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { markAsRead, markAsSeen } = useConversations(userData?.id || '');
   const [isChatInfoOpen, setIsChatInfoOpen] = useState(false);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [previousMessageCount, setPreviousMessageCount] = useState(0);
 
   const { sendMessage, editMessage, deleteMessage, deleteAllMessages, forwardMessage, sendVoiceMessage } = useChat(userData?.id || '', selectedUserId);
 
   const selectedUser = conversations.find(user => user.userId === selectedUserId);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    if (messagesEndRef.current) {
+      // On initial load or when switching chats, scroll instantly to bottom
+      if (isInitialLoad || messages.length === 0) {
+        messagesEndRef.current.scrollIntoView({ behavior: 'auto' });
+        setIsInitialLoad(false);
+      } 
+      // When new messages are added, check if user is near bottom before scrolling
+      else if (messages.length > previousMessageCount) {
+        const messagesContainer = messagesEndRef.current.parentElement;
+        if (messagesContainer) {
+          const isNearBottom = messagesContainer.scrollTop + messagesContainer.clientHeight >= messagesContainer.scrollHeight - 100;
+          
+          // Only auto-scroll if user is near the bottom (within 100px)
+          if (isNearBottom) {
+            messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+          }
+        }
+      }
+      setPreviousMessageCount(messages.length);
+    }
+  }, [messages, isInitialLoad, previousMessageCount]);
 
   useEffect(() => {
     if (selectedUserId) {
+      // Reset initial load state when switching chats
+      setIsInitialLoad(true);
+      setPreviousMessageCount(0);
+      
       // Only mark as seen if there are unread messages
       const conversation = conversations.find(conv => conv.userId === selectedUserId);
       if (conversation && conversation.unreadCount > 0) {
