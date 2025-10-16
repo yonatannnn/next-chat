@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import { Avatar } from '@/components/ui/Avatar';
 import { ImageViewer } from '@/components/ui/ImageViewer';
@@ -32,7 +32,11 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isPlayingVoice, setIsPlayingVoice] = useState(false);
+  const [showMobileOptions, setShowMobileOptions] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const longPressTimer = useRef<NodeJS.Timeout | null>(null);
+  const messageRef = useRef<HTMLDivElement | null>(null);
   const formatTime = (timestamp: Date) => {
     return new Intl.DateTimeFormat('en-US', {
       hour: '2-digit',
@@ -52,6 +56,44 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
     setIsEditing(false);
   };
 
+  // Mobile long press handlers
+  const isMobile = () => window.innerWidth <= 768;
+
+  const handleLongPressStart = () => {
+    if (isMobile()) {
+      longPressTimer.current = setTimeout(() => {
+        setShowMobileOptions(true);
+        if (navigator.vibrate) {
+          navigator.vibrate(50);
+        }
+      }, 500);
+    }
+  };
+
+  const handleLongPressEnd = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  };
+
+  // Close mobile options when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (isMobile() && showMobileOptions) {
+        const target = event.target as Element;
+        if (!target.closest('.message-bubble')) {
+          setShowMobileOptions(false);
+        }
+      }
+    };
+
+    if (showMobileOptions) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showMobileOptions]);
+
   const handleDelete = () => {
     if (onDelete && window.confirm('Are you sure you want to delete this message?')) {
       onDelete(message.id);
@@ -59,15 +101,35 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   };
 
   const handleReply = () => {
+    if (isMobile() && !showMobileOptions) {
+      return; // Don't allow reply on mobile unless options are shown
+    }
     if (onReply) {
       onReply(message);
     }
   };
 
   const handleForward = () => {
+    if (isMobile() && !showMobileOptions) {
+      return; // Don't allow forward on mobile unless options are shown
+    }
     if (onForward) {
       onForward(message);
     }
+  };
+
+  const handleEditClick = () => {
+    if (isMobile() && !showMobileOptions) {
+      return; // Don't allow edit on mobile unless options are shown
+    }
+    setIsEditing(true);
+  };
+
+  const handleDeleteClick = () => {
+    if (isMobile() && !showMobileOptions) {
+      return; // Don't allow delete on mobile unless options are shown
+    }
+    handleDelete();
   };
 
   const handleVoicePlay = () => {
@@ -108,11 +170,31 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
             <span className="text-xs text-gray-500 mb-1">{senderName}</span>
           )}
           <div
-            className={`px-3 py-2 md:px-4 md:py-2 rounded-lg relative group ${
+            className={`px-3 py-2 md:px-4 md:py-2 rounded-lg relative group message-bubble ${
               isOwn
                 ? 'bg-blue-600 text-white'
                 : 'bg-gray-100 text-gray-900'
             }`}
+            onTouchStart={handleLongPressStart}
+            onTouchEnd={handleLongPressEnd}
+            onMouseDown={handleLongPressStart}
+            onMouseUp={handleLongPressEnd}
+            onContextMenu={(e) => {
+              if (isMobile()) {
+                e.preventDefault();
+              }
+            }}
+            onMouseEnter={() => {
+              if (!isMobile()) {
+                setIsHovered(true);
+              }
+            }}
+            onMouseLeave={() => {
+              if (!isMobile()) {
+                setIsHovered(false);
+              }
+            }}
+            ref={messageRef}
           >
             {/* Reply context */}
             {message.replyTo && (
@@ -287,8 +369,12 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
 
             {/* Action buttons */}
             {!message.deleted && !isEditing && (
-              <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <div className="flex space-x-1">
+              <div className={`absolute top-1 right-1 transition-opacity ${
+                isMobile() 
+                  ? (showMobileOptions ? 'opacity-100' : 'opacity-0')
+                  : (isHovered ? 'opacity-100' : 'opacity-0')
+              }`}>
+                <div className={`flex space-x-1 ${isMobile() ? 'bg-black bg-opacity-80 rounded-lg p-1' : ''}`}>
                   {onReply && (
                     <button
                       onClick={handleReply}
@@ -310,14 +396,14 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                   {isOwn && (
                     <>
                       <button
-                        onClick={() => setIsEditing(true)}
+                        onClick={handleEditClick}
                         className="p-1 bg-blue-500 text-white rounded hover:bg-blue-600"
                         title="Edit message"
                       >
                         <Edit2 size={14} />
                       </button>
                       <button
-                        onClick={handleDelete}
+                        onClick={handleDeleteClick}
                         className="p-1 bg-red-500 text-white rounded hover:bg-red-600"
                         title="Delete message"
                       >
