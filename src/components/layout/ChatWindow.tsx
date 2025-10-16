@@ -33,6 +33,7 @@ export const ChatWindow: React.FC = () => {
   const [isAddMembersOpen, setIsAddMembersOpen] = useState(false);
   const [previousMessageCount, setPreviousMessageCount] = useState(0);
   const [processingRecommendation, setProcessingRecommendation] = useState<string | null>(null);
+  const [smoothScrollingEnabled, setSmoothScrollingEnabled] = useState(false);
 
   const { sendMessage, editMessage, deleteMessage, deleteAllMessages, forwardMessage, sendVoiceMessage } = useChat(userData?.id || '', selectedUserId);
   const { sendMessage: sendGroupMessage, editMessage: editGroupMessage, deleteMessage: deleteGroupMessage, sendVoiceMessage: sendGroupVoiceMessage } = useGroupChat(userData?.id || '', selectedGroupId);
@@ -47,6 +48,11 @@ export const ChatWindow: React.FC = () => {
       if (isInitialLoad || messages.length === 0) {
         messagesEndRef.current.scrollIntoView({ behavior: 'auto' });
         setIsInitialLoad(false);
+        
+        // After 1 second, enable smooth scrolling for future messages
+        setTimeout(() => {
+          setSmoothScrollingEnabled(true);
+        }, 1000);
       } 
       // When new messages are added, check if user is near bottom before scrolling
       else if (messages.length > previousMessageCount) {
@@ -56,19 +62,22 @@ export const ChatWindow: React.FC = () => {
           
           // Only auto-scroll if user is near the bottom (within 100px)
           if (isNearBottom) {
-            messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+            // Use smooth scrolling if enabled, otherwise instant
+            const scrollBehavior = smoothScrollingEnabled ? 'smooth' : 'auto';
+            messagesEndRef.current.scrollIntoView({ behavior: scrollBehavior });
           }
         }
       }
       setPreviousMessageCount(messages.length);
     }
-  }, [messages, isInitialLoad, previousMessageCount]);
+  }, [messages, isInitialLoad, previousMessageCount, smoothScrollingEnabled]);
 
   useEffect(() => {
     if (selectedUserId || selectedGroupId) {
       // Reset initial load state when switching chats
       setIsInitialLoad(true);
       setPreviousMessageCount(0);
+      setSmoothScrollingEnabled(false);
       
       // Only mark as seen if there are unread messages
       if (selectedUserId) {
