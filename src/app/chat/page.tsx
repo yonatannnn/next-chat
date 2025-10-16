@@ -9,7 +9,9 @@ import { useUsers } from '@/features/users/hooks/useUsers';
 import { useChatStore } from '@/features/chat/store/chatStore';
 import { useGlobalNotifications } from '@/hooks/useGlobalNotifications';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
-import { Menu, X } from 'lucide-react';
+import { DropdownMenu } from '@/components/ui/DropdownMenu';
+import { Avatar } from '@/components/ui/Avatar';
+import { Menu, X, Info, Users, Trash2 } from 'lucide-react';
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
@@ -94,8 +96,69 @@ export default function ChatPage() {
             >
               <X size={20} />
             </button>
-            <div className="flex items-center space-x-2 min-w-0 flex-1">
-              <div className="w-8 h-8 bg-gray-200 rounded-full flex-shrink-0"></div>
+            <div 
+              className="flex items-center space-x-2 min-w-0 flex-1 cursor-pointer"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('Header area clicked - selectedUserId:', selectedUserId);
+                if (selectedUserId) {
+                  console.log('Navigating to friend profile (header click):', selectedUserId);
+                  router.push(`/friend/${selectedUserId}`);
+                }
+              }}
+              onTouchEnd={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('Header area touched - selectedUserId:', selectedUserId);
+                if (selectedUserId) {
+                  console.log('Navigating to friend profile (header touch):', selectedUserId);
+                  router.push(`/friend/${selectedUserId}`);
+                }
+              }}
+              style={{ touchAction: 'manipulation' }}
+            >
+              <div className="flex-shrink-0">
+                {(() => {
+                  const selectedUser = conversations.find(user => user.userId === selectedUserId);
+                  const selectedGroup = groupConversations.find(group => group.groupId === selectedGroupId);
+                  
+                  const avatarSrc = selectedUserId 
+                    ? selectedUser?.avatar
+                    : selectedGroup?.groupAvatar;
+                  const altText = selectedUserId 
+                    ? selectedUser?.username || 'User'
+                    : selectedGroup?.groupName || 'Group';
+                  
+                  console.log('Avatar debug - selectedUserId:', selectedUserId, 'selectedUser:', selectedUser, 'avatarSrc:', avatarSrc, 'altText:', altText);
+                  
+                  return (
+                    <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center overflow-hidden">
+                      {avatarSrc ? (
+                        <img
+                          src={avatarSrc}
+                          alt={altText}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            console.log('Avatar image failed to load:', avatarSrc);
+                            e.currentTarget.style.display = 'none';
+                            const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                            if (fallback) {
+                              fallback.style.display = 'flex';
+                            }
+                          }}
+                        />
+                      ) : null}
+                      <div 
+                        className={`w-full h-full flex items-center justify-center text-gray-600 font-medium text-sm ${avatarSrc ? 'hidden' : 'flex'}`}
+                        style={{ display: avatarSrc ? 'none' : 'flex' }}
+                      >
+                        {altText ? altText.charAt(0).toUpperCase() : 'U'}
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
               <h1 className="text-lg font-semibold text-gray-900 truncate">
                 {selectedUserId 
                   ? conversations.find(user => user.userId === selectedUserId)?.username || 'Chat'
@@ -103,7 +166,46 @@ export default function ChatPage() {
                 }
               </h1>
             </div>
-            <div className="w-8" /> {/* Spacer for centering */}
+            <div className="flex-shrink-0">
+              <DropdownMenu items={[
+                {
+                  id: 'chat-info',
+                  label: selectedGroupId ? 'Group Info' : 'Chat Info',
+                  icon: <Info size={16} />,
+                  onClick: () => {
+                    // This would need to be implemented to open the chat info modal
+                    console.log('Chat info clicked');
+                  },
+                },
+                ...(selectedGroupId ? [
+                  {
+                    id: 'add-members',
+                    label: 'Add Members',
+                    icon: <Users size={16} />,
+                    onClick: () => {
+                      console.log('Add members clicked');
+                    },
+                  },
+                  {
+                    id: 'delete-group',
+                    label: 'Delete Group',
+                    icon: <Trash2 size={16} />,
+                    onClick: () => {
+                      console.log('Delete group clicked');
+                    },
+                    variant: 'danger' as const,
+                  }
+                ] : [{
+                  id: 'delete-chat',
+                  label: 'Delete Chat',
+                  icon: <Trash2 size={16} />,
+                  onClick: () => {
+                    console.log('Delete chat clicked');
+                  },
+                  variant: 'danger' as const,
+                }]),
+              ]} />
+            </div>
           </>
         ) : (
           // Sidebar mode: Show menu button and title

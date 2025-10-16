@@ -359,9 +359,9 @@ export const ChatWindow: React.FC = () => {
 
   return (
     <div className="flex-1 flex flex-col bg-white h-full">
-      {/* Chat Header - Fixed */}
-      <div className="flex-shrink-0 border-b border-gray-200 p-3 md:p-4">
-        <div className="flex items-center justify-between">
+      {/* Chat Header - Fixed - Hidden on mobile since mobile header shows this info */}
+      <div className="hidden md:flex flex-shrink-0 border-b border-gray-200 p-3 md:p-4">
+        <div className="flex items-center justify-between w-full">
           <div className="flex items-center space-x-2 md:space-x-3 min-w-0 flex-1">
             <button
               onClick={() => isGroupChat ? undefined : router.push(`/friend/${selectedUserId}`)}
@@ -385,14 +385,14 @@ export const ChatWindow: React.FC = () => {
               )}
             </div>
           </div>
-          <div className="flex-shrink-0">
+          <div className="flex-shrink-0 ml-4">
             <DropdownMenu items={dropdownItems} />
           </div>
         </div>
       </div>
 
       {/* Messages - Scrollable */}
-      <div className="flex-1 overflow-y-auto min-h-0 p-3 md:p-4 space-y-3 md:space-y-4">
+      <div className="flex-1 overflow-y-auto min-h-0 p-3 md:p-4 space-y-3 md:space-y-4 pt-4 md:pt-4">
         {/* Messages */}
         {messages.map((message) => {
           const isOwn = message.senderId === userData?.id;

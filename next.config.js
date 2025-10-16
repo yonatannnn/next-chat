@@ -15,4 +15,15 @@ const nextConfig = {
   },
 };
 
-module.exports = nextConfig;
+// Only enable PWA in production
+if (process.env.NODE_ENV === 'production') {
+  const withPWA = require('next-pwa')({
+    dest: 'public',
+    register: true,
+    skipWaiting: true,
+    buildExcludes: [/middleware-manifest\.json$/],
+  });
+  module.exports = withPWA(nextConfig);
+} else {
+  module.exports = nextConfig;
+}

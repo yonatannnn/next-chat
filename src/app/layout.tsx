@@ -1,6 +1,7 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import InstallPrompt from "@/components/ui/InstallPrompt";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -12,7 +13,29 @@ export const metadata: Metadata = {
   description: "A modern real-time chat application built with Next.js, Firebase, and Supabase",
   icons: {
     icon: "/favicon.ico",
+    apple: "/icons/icon-192x192.png",
   },
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Next Chat",
+  },
+  other: {
+    "mobile-web-app-capable": "yes",
+    "apple-mobile-web-app-capable": "yes",
+    "apple-mobile-web-app-status-bar-style": "default",
+    "msapplication-TileColor": "#3b82f6",
+    "msapplication-config": "/browserconfig.xml",
+  },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  themeColor: "#3b82f6",
 };
 
 export default function RootLayout({
@@ -26,6 +49,7 @@ export default function RootLayout({
         className={`${inter.variable} antialiased`}
       >
         {children}
+        <InstallPrompt />
       </body>
     </html>
   );
