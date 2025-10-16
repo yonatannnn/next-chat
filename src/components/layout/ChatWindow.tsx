@@ -20,7 +20,15 @@ import { ProfileRecommendationBubble } from '@/components/ui/ProfileRecommendati
 import { useRecommendations } from '@/features/profile/hooks/useRecommendations';
 import { Trash2, Info, Users, Search, X, ChevronUp, ChevronDown } from 'lucide-react';
 
-export const ChatWindow: React.FC = () => {
+interface ChatWindowProps {
+  isMobileSearchOpen?: boolean;
+  setIsMobileSearchOpen?: (open: boolean) => void;
+}
+
+export const ChatWindow: React.FC<ChatWindowProps> = ({ 
+  isMobileSearchOpen = false, 
+  setIsMobileSearchOpen 
+}) => {
   const router = useRouter();
   const { selectedUserId, selectedGroupId, messages, conversations, groupConversations, setSelectedUserId, setSelectedGroupId, replyingTo, setReplyingTo, forwardingMessage, setForwardingMessage, markMessageAsSeen, updateConversation, updateGroupConversation } = useChatStore();
   const { userData } = useAuthStore();
@@ -39,6 +47,14 @@ export const ChatWindow: React.FC = () => {
   const [isAddMembersOpen, setIsAddMembersOpen] = useState(false);
   const [previousMessageCount, setPreviousMessageCount] = useState(0);
   const [processingRecommendation, setProcessingRecommendation] = useState<string | null>(null);
+
+  // Handle mobile search state
+  useEffect(() => {
+    if (isMobileSearchOpen && setIsMobileSearchOpen) {
+      setIsSearchOpen(true);
+      setIsMobileSearchOpen(false); // Reset mobile state
+    }
+  }, [isMobileSearchOpen, setIsMobileSearchOpen]);
 
   // Search functionality
   const handleSearch = (query: string) => {

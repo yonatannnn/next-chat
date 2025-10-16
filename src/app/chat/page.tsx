@@ -13,7 +13,7 @@ import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { DropdownMenu } from '@/components/ui/DropdownMenu';
 import { Avatar } from '@/components/ui/Avatar';
 import { ChatInfoModal } from '@/components/ui/ChatInfoModal';
-import { Menu, X, Info, Users, Trash2 } from 'lucide-react';
+import { Menu, X, Info, Users, Trash2, Search } from 'lucide-react';
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
@@ -26,6 +26,7 @@ export default function ChatPage() {
   const { messages } = useChat(userData?.id || '', selectedUserId);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true); // Start with sidebar open on mobile
   const [isChatInfoOpen, setIsChatInfoOpen] = useState(false);
+  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   
   // Initialize online status tracking
   const { isOnline, allStatuses } = useOnlineStatus(userData?.id);
@@ -171,7 +172,17 @@ export default function ChatPage() {
                 }
               </h1>
             </div>
-            <div className="flex-shrink-0">
+            <div className="flex-shrink-0 flex items-center space-x-2">
+              <button
+                onClick={() => {
+                  console.log('Search button clicked on mobile');
+                  setIsMobileSearchOpen(true);
+                }}
+                className="p-2 text-gray-600 hover:text-gray-900"
+                title="Search Messages"
+              >
+                <Search size={20} />
+              </button>
               <DropdownMenu items={[
                 {
                   id: 'chat-info',
@@ -251,7 +262,10 @@ export default function ChatPage() {
         flex-1 flex flex-col pt-16 md:pt-0 h-full md:h-screen
         ${(selectedUserId || selectedGroupId) ? 'block' : 'hidden md:flex'}
       `}>
-        <ChatWindow />
+        <ChatWindow 
+          isMobileSearchOpen={isMobileSearchOpen}
+          setIsMobileSearchOpen={setIsMobileSearchOpen}
+        />
       </div>
 
       {/* Chat Info Modal */}
