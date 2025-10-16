@@ -8,6 +8,7 @@ import { useAuth } from '@/features/auth/hooks/useAuth';
 import { useUsers } from '@/features/users/hooks/useUsers';
 import { useChatStore } from '@/features/chat/store/chatStore';
 import { useGlobalNotifications } from '@/hooks/useGlobalNotifications';
+import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { Menu, X } from 'lucide-react';
 
 // Force dynamic rendering
@@ -19,6 +20,9 @@ export default function ChatPage() {
   const { users } = useUsers(userData?.id || '');
   const { selectedUserId, conversations, setSelectedUserId } = useChatStore();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true); // Start with sidebar open on mobile
+  
+  // Initialize online status tracking
+  const { isOnline, allStatuses } = useOnlineStatus(userData?.id);
   
   // Initialize global notifications
   useGlobalNotifications();

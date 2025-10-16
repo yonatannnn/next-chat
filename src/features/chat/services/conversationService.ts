@@ -11,6 +11,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Conversation } from '../store/chatStore';
+import { onlineStatusService } from '@/services/onlineStatusService';
 
 export const conversationService = {
   subscribeToConversations(currentUserId: string, callback: (conversations: Conversation[]) => void) {
@@ -69,6 +70,10 @@ export const conversationService = {
             const unreadSnapshot = await getDocs(unreadQuery);
             const unreadCount = unreadSnapshot.size;
             
+            // Get online status for this user
+            const userStatus = await onlineStatusService.getStatus(userId);
+            const isOnline = userStatus?.isOnline || false;
+
             const conversation: Conversation = {
               id: userId,
               userId: userId,
@@ -78,7 +83,7 @@ export const conversationService = {
               lastMessage: latestMessage?.text || '',
               lastMessageTime: latestMessage?.timestamp?.toDate() || new Date(),
               unreadCount,
-              isOnline: true // You can implement real online status later
+              isOnline
             };
             
             conversationsMap.set(userId, conversation);
@@ -132,22 +137,27 @@ export const conversationService = {
       }
       
       const snapshot = await getDocs(firestoreQuery);
-      const users: Conversation[] = snapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: data.id,
-          userId: data.id,
-          username: data.username,
-          email: data.email,
-          avatar: data.avatar,
-          lastMessage: '',
-          lastMessageTime: new Date(),
-          unreadCount: 0,
-          isOnline: true
-        };
-      }).filter(user => user.userId !== currentUserId);
+      const users: Conversation[] = await Promise.all(
+        snapshot.docs.map(async (doc) => {
+          const data = doc.data();
+          const userStatus = await onlineStatusService.getStatus(data.id);
+          const isOnline = userStatus?.isOnline || false;
+          
+          return {
+            id: data.id,
+            userId: data.id,
+            username: data.username,
+            email: data.email,
+            avatar: data.avatar,
+            lastMessage: '',
+            lastMessageTime: new Date(),
+            unreadCount: 0,
+            isOnline
+          };
+        })
+      );
       
-      return users;
+      return users.filter(user => user.userId !== currentUserId);
     } catch (error) {
       console.error('Error searching users:', error);
       return [];

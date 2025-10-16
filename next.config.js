@@ -10,6 +10,9 @@ const nextConfig = {
       },
     ],
   },
+  env: {
+    NEXT_PUBLIC_BACKEND_URL: process.env.NEXT_PUBLIC_BACKEND_URL || 'https://web-production-ac2a6.up.railway.app',
+  },
 };
 
 module.exports = nextConfig;

@@ -6,6 +6,7 @@ import { NotificationSettings } from '@/components/ui/NotificationSettings';
 import { useChatStore } from '@/features/chat/store/chatStore';
 import { useAuthStore } from '@/features/auth/store/authStore';
 import { useConversations } from '@/features/chat/hooks/useConversations';
+import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { LogOut, MessageCircle, Settings, Search, X, Bell } from 'lucide-react';
 
 export const Sidebar: React.FC = () => {
@@ -13,6 +14,7 @@ export const Sidebar: React.FC = () => {
   const { selectedUserId, setSelectedUserId, addConversation } = useChatStore();
   const { userData, logout } = useAuthStore();
   const { conversations, searchUsers, markAsRead, markAsSeen } = useConversations(userData?.id || '');
+  const { allStatuses } = useOnlineStatus(userData?.id);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -170,6 +172,10 @@ export const Sidebar: React.FC = () => {
                       size="sm"
                       className="md:w-10 md:h-10"
                     />
+                    {/* Online status indicator */}
+                    {allStatuses[user.userId]?.isOnline && (
+                      <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
+                    )}
                   </div>
                   <div className="flex-1 text-left min-w-0">
                     <div className="flex items-center justify-between">
