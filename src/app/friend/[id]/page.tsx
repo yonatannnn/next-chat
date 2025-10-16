@@ -18,7 +18,7 @@ export default function FriendProfilePage() {
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
 
   useEffect(() => {
-    if (params.id && users.length > 0) {
+    if (params?.id && users.length > 0) {
       const foundFriend = users.find(u => u.id === params.id);
       if (foundFriend) {
         setFriend(foundFriend);
@@ -27,7 +27,7 @@ export default function FriendProfilePage() {
         router.push('/chat');
       }
     }
-  }, [params.id, users, router]);
+  }, [params?.id, users, router]);
 
   const handleStartChat = () => {
     router.push(`/chat?user=${friend?.id}`);

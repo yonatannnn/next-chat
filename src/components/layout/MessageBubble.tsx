@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import Image from 'next/image';
 import { Avatar } from '@/components/ui/Avatar';
 import { ImageViewer } from '@/components/ui/ImageViewer';
+import { LinkifiedText } from '@/components/ui/LinkifiedText';
 import { Message } from '@/features/chat/store/chatStore';
 import { Edit2, Trash2, Check, X, Reply, Forward, Play, Pause, Volume2 } from 'lucide-react';
 
@@ -266,13 +267,18 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
               </div>
             ) : (
               <div>
-                <p className="text-sm md:text-base">
-                  {message.deleted ? (
-                    <span className="italic text-gray-500">This message was deleted</span>
-                  ) : (
-                    message.text
-                  )}
-                </p>
+                {message.deleted ? (
+                  <p className="text-sm md:text-base italic text-gray-500">
+                    This message was deleted
+                  </p>
+                ) : (
+                  <LinkifiedText 
+                    text={message.text}
+                    showPreviews={true}
+                    className="text-sm md:text-base"
+                    isOwn={isOwn}
+                  />
+                )}
                 {message.edited && (
                   <span className="text-xs opacity-70">(edited)</span>
                 )}
