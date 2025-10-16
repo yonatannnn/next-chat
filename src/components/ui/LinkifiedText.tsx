@@ -7,18 +7,43 @@ interface LinkifiedTextProps {
   showPreviews?: boolean;
   className?: string;
   isOwn?: boolean;
+  searchQuery?: string;
 }
 
 export const LinkifiedText: React.FC<LinkifiedTextProps> = ({ 
   text, 
   showPreviews = true, 
   className = '',
-  isOwn = false
+  isOwn = false,
+  searchQuery
 }) => {
   const links = detectLinks(text);
   
+  // Search highlighting function
+  const highlightSearchTerm = (text: string, query: string) => {
+    if (!query || !text) return text;
+    
+    const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+    const parts = text.split(regex);
+    
+    return parts.map((part, index) => {
+      if (regex.test(part)) {
+        return (
+          <mark key={index} className="bg-yellow-200 px-1 rounded">
+            {part}
+          </mark>
+        );
+      }
+      return part;
+    });
+  };
+  
   if (links.length === 0) {
-    return <span className={className}>{text}</span>;
+    return (
+      <span className={className}>
+        {searchQuery ? highlightSearchTerm(text, searchQuery) : text}
+      </span>
+    );
   }
 
   // Split text into parts and render with links

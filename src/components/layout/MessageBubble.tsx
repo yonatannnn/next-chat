@@ -15,6 +15,9 @@ interface MessageBubbleProps {
   onDelete?: (messageId: string) => void;
   onReply?: (message: Message) => void;
   onForward?: (message: Message) => void;
+  searchQuery?: string;
+  isSearchResult?: boolean;
+  isCurrentSearchResult?: boolean;
 }
 
 export const MessageBubble: React.FC<MessageBubbleProps> = ({
@@ -26,6 +29,9 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   onDelete,
   onReply,
   onForward,
+  searchQuery,
+  isSearchResult,
+  isCurrentSearchResult,
 }) => {
   const isSystemMessage = message.senderId === 'system';
   const [isEditing, setIsEditing] = useState(false);
@@ -43,6 +49,25 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
       hour: '2-digit',
       minute: '2-digit',
     }).format(timestamp);
+  };
+
+  // Search highlighting function
+  const highlightSearchTerm = (text: string, query: string) => {
+    if (!query || !text) return text;
+    
+    const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+    const parts = text.split(regex);
+    
+    return parts.map((part, index) => {
+      if (regex.test(part)) {
+        return (
+          <mark key={index} className="bg-yellow-200 px-1 rounded">
+            {part}
+          </mark>
+        );
+      }
+      return part;
+    });
   };
 
   const handleEdit = () => {
@@ -168,7 +193,10 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   }
 
   return (
-    <div className={`flex ${isOwn ? 'justify-end' : 'justify-start'} mb-3 md:mb-4`}>
+    <div 
+      className={`flex ${isOwn ? 'justify-end' : 'justify-start'} mb-3 md:mb-4`}
+      data-message-id={message.id}
+    >
       <div className={`flex max-w-[85%] sm:max-w-xs lg:max-w-md ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}>
         {!isOwn && (
           <Avatar
@@ -187,6 +215,12 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
               isOwn
                 ? 'bg-blue-600 text-white'
                 : 'bg-gray-100 text-gray-900'
+            } ${
+              isCurrentSearchResult 
+                ? 'ring-2 ring-yellow-400 bg-yellow-50' 
+                : isSearchResult 
+                  ? 'bg-yellow-50' 
+                  : ''
             }`}
             onTouchStart={handleLongPressStart}
             onTouchEnd={handleLongPressEnd}
@@ -372,6 +406,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                     showPreviews={true}
                     className="text-sm md:text-base"
                     isOwn={isOwn}
+                    searchQuery={searchQuery}
                   />
                 )}
                 {message.edited && (

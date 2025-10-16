@@ -18,7 +18,7 @@ import { ForwardMessageModal } from '@/components/ui/ForwardMessageModal';
 import { AddMembersModal } from '@/components/ui/AddMembersModal';
 import { ProfileRecommendationBubble } from '@/components/ui/ProfileRecommendationBubble';
 import { useRecommendations } from '@/features/profile/hooks/useRecommendations';
-import { Trash2, Info, Users } from 'lucide-react';
+import { Trash2, Info, Users, Search, X, ChevronUp, ChevronDown } from 'lucide-react';
 
 export const ChatWindow: React.FC = () => {
   const router = useRouter();
@@ -28,11 +28,122 @@ export const ChatWindow: React.FC = () => {
   const { markAsRead, markAsSeen } = useConversations(userData?.id || '');
   const { markGroupAsRead, markGroupAsSeen } = useGroupConversations(userData?.id || '');
   const { recommendations, acceptRecommendation, rejectRecommendation, deleteRecommendation } = useRecommendations(userData?.id || '');
+  
+  // Search functionality
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchResults, setSearchResults] = useState<Message[]>([]);
+  const [currentSearchIndex, setCurrentSearchIndex] = useState(0);
   const [isChatInfoOpen, setIsChatInfoOpen] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [isAddMembersOpen, setIsAddMembersOpen] = useState(false);
   const [previousMessageCount, setPreviousMessageCount] = useState(0);
   const [processingRecommendation, setProcessingRecommendation] = useState<string | null>(null);
+
+  // Search functionality
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    if (query.trim() === '') {
+      setSearchResults([]);
+      setCurrentSearchIndex(0);
+      return;
+    }
+
+    const filteredMessages = messages.filter(message => 
+      message.text.toLowerCase().includes(query.toLowerCase())
+    );
+    setSearchResults(filteredMessages);
+    setCurrentSearchIndex(0);
+    
+    // Scroll to first result if found
+    if (filteredMessages.length > 0) {
+      setTimeout(() => {
+        const firstMessage = filteredMessages[0];
+        const messageElement = document.querySelector(`[data-message-id="${firstMessage.id}"]`);
+        if (messageElement) {
+          messageElement.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'center' 
+          });
+        }
+      }, 100);
+    }
+  };
+
+  const navigateSearch = (direction: 'up' | 'down') => {
+    if (searchResults.length === 0) return;
+    
+    let newIndex;
+    if (direction === 'up') {
+      newIndex = currentSearchIndex > 0 ? currentSearchIndex - 1 : searchResults.length - 1;
+    } else {
+      newIndex = currentSearchIndex < searchResults.length - 1 ? currentSearchIndex + 1 : 0;
+    }
+    
+    setCurrentSearchIndex(newIndex);
+    
+    // Scroll to the current search result
+    setTimeout(() => {
+      const currentMessage = searchResults[newIndex];
+      if (currentMessage) {
+        const messageElement = document.querySelector(`[data-message-id="${currentMessage.id}"]`);
+        if (messageElement) {
+          messageElement.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'center' 
+          });
+        }
+      }
+    }, 100);
+  };
+
+  const closeSearch = () => {
+    // Store the current search result position before closing
+    const currentResult = searchResults[currentSearchIndex];
+    
+    setIsSearchOpen(false);
+    setSearchQuery('');
+    setSearchResults([]);
+    setCurrentSearchIndex(0);
+    
+    // Scroll back to the last viewed search result
+    if (currentResult) {
+      setTimeout(() => {
+        const messageElement = document.querySelector(`[data-message-id="${currentResult.id}"]`);
+        if (messageElement) {
+          messageElement.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'center' 
+          });
+        }
+      }, 100);
+    }
+  };
+
+  // Keyboard shortcuts for search
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!isSearchOpen) return;
+      
+      if (e.key === 'Escape') {
+        closeSearch();
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (searchResults.length > 0) {
+          navigateSearch('down');
+        }
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        navigateSearch('up');
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        navigateSearch('down');
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isSearchOpen, searchResults.length, currentSearchIndex]);
   const [smoothScrollingEnabled, setSmoothScrollingEnabled] = useState(false);
 
   const { sendMessage, editMessage, deleteMessage, deleteAllMessages, forwardMessage, sendVoiceMessage } = useChat(userData?.id || '', selectedUserId);
@@ -44,8 +155,8 @@ export const ChatWindow: React.FC = () => {
 
   useEffect(() => {
     if (messagesEndRef.current) {
-      // On initial load or when switching chats, scroll instantly to bottom
-      if (isInitialLoad || messages.length === 0) {
+      // On initial load or when switching chats, scroll instantly to bottom (unless search is active)
+      if ((isInitialLoad || messages.length === 0) && !isSearchOpen) {
         messagesEndRef.current.scrollIntoView({ behavior: 'auto' });
         setIsInitialLoad(false);
         
@@ -56,6 +167,12 @@ export const ChatWindow: React.FC = () => {
       } 
       // When new messages are added, check if user is near bottom before scrolling
       else if (messages.length > previousMessageCount) {
+        // Don't auto-scroll if search is active
+        if (isSearchOpen) {
+          setPreviousMessageCount(messages.length);
+          return;
+        }
+        
         const messagesContainer = messagesEndRef.current.parentElement;
         if (messagesContainer) {
           const isNearBottom = messagesContainer.scrollTop + messagesContainer.clientHeight >= messagesContainer.scrollHeight - 100;
@@ -70,7 +187,7 @@ export const ChatWindow: React.FC = () => {
       }
       setPreviousMessageCount(messages.length);
     }
-  }, [messages, isInitialLoad, previousMessageCount, smoothScrollingEnabled]);
+  }, [messages, isInitialLoad, previousMessageCount, smoothScrollingEnabled, isSearchOpen]);
 
   useEffect(() => {
     if (selectedUserId || selectedGroupId) {
@@ -314,6 +431,12 @@ export const ChatWindow: React.FC = () => {
 
   const dropdownItems = [
     {
+      id: 'search',
+      label: 'Search Messages',
+      icon: <Search size={16} />,
+      onClick: () => setIsSearchOpen(true),
+    },
+    {
       id: 'chat-info',
       label: isGroupChat ? 'Group Info' : 'Chat Info',
       icon: <Info size={16} />,
@@ -391,6 +514,53 @@ export const ChatWindow: React.FC = () => {
         </div>
       </div>
 
+      {/* Search Interface */}
+      {isSearchOpen && (
+        <div className="flex-shrink-0 border-b border-gray-200 p-3 bg-gray-50">
+          <div className="flex items-center space-x-2">
+            <div className="flex-1 relative">
+              <input
+                type="text"
+                placeholder="Search messages..."
+                value={searchQuery}
+                onChange={(e) => handleSearch(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                autoFocus
+              />
+              {searchQuery && (
+                <button
+                  onClick={closeSearch}
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  <X size={16} />
+                </button>
+              )}
+            </div>
+            {searchResults.length > 0 && (
+              <div className="flex items-center space-x-1">
+                <span className="text-sm text-gray-600">
+                  {currentSearchIndex + 1} of {searchResults.length}
+                </span>
+                <button
+                  onClick={() => navigateSearch('up')}
+                  className="p-1 text-gray-400 hover:text-gray-600"
+                  disabled={searchResults.length === 0}
+                >
+                  <ChevronUp size={16} />
+                </button>
+                <button
+                  onClick={() => navigateSearch('down')}
+                  className="p-1 text-gray-400 hover:text-gray-600"
+                  disabled={searchResults.length === 0}
+                >
+                  <ChevronDown size={16} />
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Messages - Scrollable */}
       <div className="flex-1 overflow-y-auto min-h-0 p-3 md:p-4 space-y-3 md:space-y-4 pt-4 md:pt-4">
         {/* Messages */}
@@ -416,6 +586,9 @@ export const ChatWindow: React.FC = () => {
             senderAvatar = selectedUser?.avatar || '';
           }
           
+          const isSearchResult = searchResults.some(result => result.id === message.id);
+          const isCurrentSearchResult = searchResults[currentSearchIndex]?.id === message.id;
+          
           return (
             <MessageBubble
               key={message.id}
@@ -427,6 +600,9 @@ export const ChatWindow: React.FC = () => {
               onDelete={isGroupChat ? deleteGroupMessage : deleteMessage}
               onReply={handleReply}
               onForward={handleForward}
+              searchQuery={searchQuery}
+              isSearchResult={isSearchResult}
+              isCurrentSearchResult={isCurrentSearchResult}
             />
           );
         })}
