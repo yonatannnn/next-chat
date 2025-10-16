@@ -4,16 +4,19 @@ import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { useUsers } from '@/features/users/hooks/useUsers';
+import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { ArrowLeft, User, Mail, Calendar, CheckCircle, MessageCircle } from 'lucide-react';
 import { ImageModal } from '@/components/ui/ImageModal';
+import { formatTimestamp } from '@/utils/formatTimestamp';
 
 export default function FriendProfilePage() {
   const router = useRouter();
   const params = useParams();
   const { userData } = useAuth();
   const { users } = useUsers(userData?.id || '');
+  const { allStatuses } = useOnlineStatus(userData?.id);
   const [friend, setFriend] = useState<any>(null);
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
 
@@ -28,6 +31,31 @@ export default function FriendProfilePage() {
       }
     }
   }, [params?.id, users, router]);
+
+  // Get friend's online status
+  const friendStatus = friend ? allStatuses[friend.id] : null;
+  const isOnline = friendStatus?.isOnline || false;
+  const lastSeen = friendStatus?.lastSeen;
+
+  // Format status text
+  const getStatusText = () => {
+    if (isOnline) {
+      return 'Online';
+    } else if (lastSeen) {
+      return `Last seen ${formatTimestamp(new Date(lastSeen))}`;
+    } else {
+      return 'Offline';
+    }
+  };
+
+  // Format status color
+  const getStatusColor = () => {
+    if (isOnline) {
+      return 'text-green-600';
+    } else {
+      return 'text-gray-500';
+    }
+  };
 
   const handleStartChat = () => {
     router.push(`/chat?user=${friend?.id}`);
@@ -85,8 +113,8 @@ export default function FriendProfilePage() {
               <div className="text-white min-w-0 flex-1">
                 <h2 className="text-2xl md:text-3xl font-bold truncate">{friend.username}</h2>
                 <p className="text-blue-100 mt-1 text-sm md:text-base truncate">{friend.name || friend.email}</p>
-                <p className="text-blue-200 text-xs md:text-sm mt-2">
-                  Online
+                <p className={`text-xs md:text-sm mt-2 ${isOnline ? 'text-green-200' : 'text-blue-200'}`}>
+                  {getStatusText()}
                 </p>
               </div>
             </div>
@@ -149,7 +177,7 @@ export default function FriendProfilePage() {
                   <Calendar size={18} className="text-gray-600 md:w-5 md:h-5" />
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-gray-900">Status</p>
-                    <p className="text-xs text-green-600">Online</p>
+                    <p className={`text-xs ${getStatusColor()}`}>{getStatusText()}</p>
                   </div>
                 </div>
               </div>
