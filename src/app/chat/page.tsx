@@ -7,10 +7,12 @@ import { ChatWindow } from '@/components/layout/ChatWindow';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { useUsers } from '@/features/users/hooks/useUsers';
 import { useChatStore } from '@/features/chat/store/chatStore';
+import { useChat } from '@/features/chat/hooks/useChat';
 import { useGlobalNotifications } from '@/hooks/useGlobalNotifications';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { DropdownMenu } from '@/components/ui/DropdownMenu';
 import { Avatar } from '@/components/ui/Avatar';
+import { ChatInfoModal } from '@/components/ui/ChatInfoModal';
 import { Menu, X, Info, Users, Trash2 } from 'lucide-react';
 
 // Force dynamic rendering
@@ -21,7 +23,9 @@ export default function ChatPage() {
   const { user, userData, isLoading } = useAuth();
   const { users } = useUsers(userData?.id || '');
   const { selectedUserId, selectedGroupId, conversations, groupConversations, setSelectedUserId, setSelectedGroupId } = useChatStore();
+  const { messages } = useChat(userData?.id || '', selectedUserId);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true); // Start with sidebar open on mobile
+  const [isChatInfoOpen, setIsChatInfoOpen] = useState(false);
   
   // Initialize online status tracking
   const { isOnline, allStatuses } = useOnlineStatus(userData?.id);
@@ -173,8 +177,8 @@ export default function ChatPage() {
                   label: selectedGroupId ? 'Group Info' : 'Chat Info',
                   icon: <Info size={16} />,
                   onClick: () => {
-                    // This would need to be implemented to open the chat info modal
                     console.log('Chat info clicked');
+                    setIsChatInfoOpen(true);
                   },
                 },
                 ...(selectedGroupId ? [
@@ -248,6 +252,22 @@ export default function ChatPage() {
       `}>
         <ChatWindow />
       </div>
+
+      {/* Chat Info Modal */}
+      {selectedUserId && (
+        <ChatInfoModal
+          isOpen={isChatInfoOpen}
+          onClose={() => setIsChatInfoOpen(false)}
+          user={{
+            username: conversations.find(user => user.userId === selectedUserId)?.username || 'Unknown',
+            email: conversations.find(user => user.userId === selectedUserId)?.email || '',
+            avatar: conversations.find(user => user.userId === selectedUserId)?.avatar
+          }}
+          messages={messages}
+          currentUserId={userData?.id || ''}
+          lastMessageTime={messages.length > 0 ? messages[messages.length - 1]?.timestamp : undefined}
+        />
+      )}
     </div>
   );
 }
