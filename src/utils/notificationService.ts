@@ -98,54 +98,8 @@ class NotificationService {
       const isAndroid = /Android/.test(navigator.userAgent);
       
 
-      // Try to use our custom notification service worker first
-      if ('serviceWorker' in navigator && 'Notification' in window) {
-        try {
-          // Register our custom notification service worker
-          const notificationRegistration = await navigator.serviceWorker.register('/notifications-sw.js', {
-            scope: '/'
-          });
-          
-          if (notificationRegistration.active) {
-            console.log('Using custom notification service worker');
-            
-            const notificationOptions = {
-              body: data.body,
-              icon: data.icon || '/icons/icon-192x192.png',
-              badge: data.badge || '/icons/icon-72x72.png',
-              tag: data.tag,
-              data: data.data,
-              requireInteraction: true,
-              silent: false,
-              vibrate: isMobile ? [200, 100, 200] : undefined,
-              actions: isMobile ? [
-                {
-                  action: 'open',
-                  title: 'Open Chat'
-                },
-                {
-                  action: 'close',
-                  title: 'Dismiss'
-                }
-              ] : undefined
-            };
-
-            // Send message to our custom service worker
-            notificationRegistration.active.postMessage({
-              action: 'showNotification',
-              title: data.title,
-              options: notificationOptions
-            });
-
-            console.log('Notification sent to custom service worker:', data.title);
-            return null; // Service worker handles the notification
-          }
-        } catch (swError) {
-          console.warn('Custom notification service worker not available, falling back to regular notifications:', swError);
-        }
-      }
-
-      // Fallback to regular notification API
+      // Use regular notification API directly
+      console.log('Creating notification with title:', data.title);
       
       const notificationOptions: NotificationOptions = {
         body: data.body,
@@ -177,15 +131,18 @@ class NotificationService {
       }
 
       const notification = new Notification(data.title, notificationOptions);
+      console.log('Notification created successfully:', notification);
 
       // Handle notification click
       notification.onclick = () => {
+        console.log('Notification clicked');
         window.focus();
         notification.close();
       };
 
       // Auto-close after 10 seconds
       setTimeout(() => {
+        console.log('Auto-closing notification');
         notification.close();
       }, 10000);
 

@@ -132,11 +132,13 @@ export const useGlobalNotifications = () => {
           senderId: latestMessage.senderId
         });
         
+        console.log('Calling notificationService.showChatNotification...');
         notificationService.showChatNotification(
           senderName,
           latestMessage.text,
           latestMessage.senderId
         ).then(notification => {
+          console.log('Notification service returned:', notification);
           if (notification) {
             // Handle notification click
             notification.onclick = () => {
