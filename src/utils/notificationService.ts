@@ -103,11 +103,13 @@ class NotificationService {
     }
 
     try {
+      const vapidKey = this.urlBase64ToArrayBuffer(
+        'BEl62iUYgUivxIkv69yViEuiBIa40HI0lYbL1VU2XD0X8rVUuX8qVuYBTj3vU4d0y_0VpTYA8Yk4n7wU8iU0V'
+      );
+      
       const subscription = await this.registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: this.urlBase64ToUint8Array(
-          'BEl62iUYgUivxIkv69yViEuiBIa40HI0lYbL1VU2XD0X8rVUuX8qVuYBTj3vU4d0y_0VpTYA8Yk4n7wU8iU0V'
-        )
+        applicationServerKey: vapidKey
       });
 
       console.log('Push subscription created:', subscription);
@@ -326,6 +328,24 @@ class NotificationService {
       outputArray[i] = rawData.charCodeAt(i);
     }
     return outputArray;
+  }
+
+  /**
+   * Convert URL-safe base64 to ArrayBuffer for VAPID keys
+   */
+  private urlBase64ToArrayBuffer(base64String: string): ArrayBuffer {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding)
+      .replace(/-/g, '+')
+      .replace(/_/g, '/');
+
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+
+    for (let i = 0; i < rawData.length; ++i) {
+      outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray.buffer;
   }
 
   /**
