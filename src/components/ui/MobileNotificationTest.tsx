@@ -116,8 +116,10 @@ export const MobileNotificationTest: React.FC = () => {
 
       if (notification) {
         setTestResult(prev => prev + '✅ Test notification sent successfully!\n');
+        console.log('Test notification created:', notification);
       } else {
         setTestResult(prev => prev + '⚠️ Notification handled by service worker\n');
+        console.log('Notification handled by service worker');
       }
 
       // Additional mobile-specific checks

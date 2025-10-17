@@ -9,7 +9,7 @@ export const ServiceWorkerRegistration: React.FC = () => {
         try {
           console.log('🔧 Registering service worker...');
           
-          const registration = await navigator.serviceWorker.register('/sw-custom.js', {
+          const registration = await navigator.serviceWorker.register('/sw.js', {
             scope: '/'
           });
           

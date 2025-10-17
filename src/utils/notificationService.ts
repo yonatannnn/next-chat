@@ -45,26 +45,22 @@ class NotificationService {
         const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
         
         if (isMobile) {
-          console.log('Mobile device detected, requesting notification permission...');
-          
           // For iOS Safari, we need to ensure the user gesture is recent
           if (isIOS) {
-            console.log('iOS device detected, ensuring proper user interaction...');
+            // iOS specific handling
           }
         }
 
         this.permission = await Notification.requestPermission();
-        console.log('Notification permission result:', this.permission);
         
         // For mobile, also check if service worker is ready
         if (this.permission === 'granted' && 'serviceWorker' in navigator) {
           try {
             const registration = await navigator.serviceWorker.ready;
-            console.log('Service worker ready for notifications:', !!registration);
             
             // Test if service worker can show notifications
             if (registration.active) {
-              console.log('Service worker is active and ready for notifications');
+              // Service worker is ready
             }
           } catch (error) {
             console.error('Service worker not ready:', error);
@@ -108,8 +104,6 @@ class NotificationService {
           const registration = await navigator.serviceWorker.ready;
           
           if (registration.active) {
-            console.log('Using service worker for notification');
-            
             // Use service worker for PWA notifications
             const notificationOptions = {
               body: data.body,
@@ -139,16 +133,16 @@ class NotificationService {
               options: notificationOptions
             });
 
-            console.log('PWA notification sent to service worker');
+            console.log('Notification sent to service worker:', data.title);
             return null; // Service worker handles the notification
           }
         } catch (swError) {
           console.warn('Service worker not available, falling back to regular notifications:', swError);
+          // Fall through to regular notification API
         }
       }
 
       // Fallback to regular notification API
-      console.log('Using regular notification API');
       
       const notificationOptions: NotificationOptions = {
         body: data.body,

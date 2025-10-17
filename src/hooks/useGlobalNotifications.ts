@@ -61,14 +61,10 @@ export const useGlobalNotifications = () => {
   useEffect(() => {
     if (!userData?.id) return;
 
-    console.log('🔔 Setting up global message listener for user:', userData.id);
-
     // Create a service to listen to all messages where current user is the receiver
     const unsubscribe = chatService.subscribeToAllIncomingMessages(
       userData.id,
       (allMessages) => {
-        console.log('🔔 Received all messages:', allMessages.length);
-        
         if (!allMessages.length) return;
 
         // Find the latest message by timestamp
@@ -76,16 +72,8 @@ export const useGlobalNotifications = () => {
           return current.timestamp > latest.timestamp ? current : latest;
         });
         
-        console.log('🔔 Latest message found:', {
-          id: latestMessage.id,
-          senderId: latestMessage.senderId,
-          text: latestMessage.text,
-          timestamp: latestMessage.timestamp
-        });
-        
         // Skip if this is the same message we already processed
         if (lastMessageRef.current?.id === latestMessage.id) {
-          console.log('🔔 Skipping: Same message already processed');
           return;
         }
 
@@ -101,7 +89,6 @@ export const useGlobalNotifications = () => {
         // Skip if we're currently viewing the chat with this sender
         // This prevents notifications when user is actively in the chat
         if (selectedUserId === latestMessage.senderId) {
-          console.log('🔔 Skipping notification: User is currently viewing this chat');
           lastMessageRef.current = {
             id: latestMessage.id,
             timestamp: latestMessage.timestamp.getTime()
@@ -111,7 +98,6 @@ export const useGlobalNotifications = () => {
 
         // Skip if the tab is focused (user is actively using the app)
         if (notificationService.isTabFocused()) {
-          console.log('🔔 Skipping notification: Tab is focused (user is actively using the app)');
           lastMessageRef.current = {
             id: latestMessage.id,
             timestamp: latestMessage.timestamp.getTime()
@@ -140,7 +126,11 @@ export const useGlobalNotifications = () => {
         // Show notification for new message
         const senderName = conversations.find(conv => conv.userId === latestMessage.senderId)?.username || 'Someone';
         
-        console.log('🔔 Showing notification for message from:', senderName);
+        console.log('🔔 New message notification:', {
+          sender: senderName,
+          text: latestMessage.text,
+          senderId: latestMessage.senderId
+        });
         
         notificationService.showChatNotification(
           senderName,
@@ -148,15 +138,12 @@ export const useGlobalNotifications = () => {
           latestMessage.senderId
         ).then(notification => {
           if (notification) {
-            console.log('🔔 Notification shown successfully');
             // Handle notification click
             notification.onclick = () => {
               window.focus();
               // You can add logic here to navigate to the specific chat
               notification.close();
             };
-          } else {
-            console.log('🔔 Failed to show notification');
           }
         }).catch(error => {
           console.error('Error showing notification:', error);
@@ -170,7 +157,6 @@ export const useGlobalNotifications = () => {
     );
 
     return () => {
-      console.log('🔔 Cleaning up global message listener');
       unsubscribe();
     };
   }, [userData?.id, selectedUserId, conversations]);
