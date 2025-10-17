@@ -50,7 +50,7 @@ export const MobileNotificationTest: React.FC = () => {
         setSwStatus({ supported: false });
       }
     } catch (error) {
-      setSwStatus({ supported: false, error: error.message });
+      setSwStatus({ supported: false, error: error instanceof Error ? error.message : 'Unknown error' });
     }
   };
 
