@@ -3,8 +3,8 @@ import webpush from 'web-push';
 
 // Configure VAPID keys (same as in notificationService.ts)
 const vapidKeys = {
-  publicKey: 'BEl62iUYgUivxIkv69yViEuiBIa40HI0lYbL1VU2XD0X8rVUuX8qVuYBTj3vU4d0y_0VpTYA8Yk4n7wU8iU0V',
-  privateKey: process.env.VAPID_PRIVATE_KEY || 'your-private-key-here'
+  publicKey: 'BPyk4E4ejKjRE1aYPFz7NwfYse_xhdOoBgZHjiwOz3AjTho8EtPxNvRnDFDCGBh3XKRzm5p55BdLhajnPpV4KRI',
+  privateKey: process.env.VAPID_PRIVATE_KEY || 'IzG9CRovS6FAg7Ig_vZkZ0afpMoCnuHi37CAGqpPiHM'
 };
 
 // Configure web-push
