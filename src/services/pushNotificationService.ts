@@ -24,27 +24,25 @@ class PushNotificationService {
    */
   async storePushSubscription(subscriptionData: PushSubscriptionData): Promise<boolean> {
     try {
-      if (!supabase) {
-        console.error('Supabase not initialized');
-        return false;
-      }
-
-      const { error } = await supabase
-        .from('push_subscriptions')
-        .upsert({
-          user_id: subscriptionData.userId,
+      // Use API endpoint with service role for database operations
+      const response = await fetch('/api/push-subscriptions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: subscriptionData.userId,
           endpoint: subscriptionData.endpoint,
           p256dh: subscriptionData.p256dh,
           auth: subscriptionData.auth,
-          user_agent: subscriptionData.userAgent,
+          userAgent: subscriptionData.userAgent,
           platform: subscriptionData.platform,
-          updated_at: new Date().toISOString()
-        }, {
-          onConflict: 'user_id'
-        });
+        }),
+      });
 
-      if (error) {
-        console.error('Error storing push subscription:', error);
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Error storing push subscription:', errorData);
         return false;
       }
 
@@ -61,30 +59,21 @@ class PushNotificationService {
    */
   async getPushSubscription(userId: string): Promise<PushSubscriptionData | null> {
     try {
-      if (!supabase) {
-        console.error('Supabase not initialized');
+      // Use API endpoint with service role for database operations
+      const response = await fetch(`/api/push-subscriptions?userId=${userId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        console.error('Error getting push subscription:', response.statusText);
         return null;
       }
 
-      const { data, error } = await supabase
-        .from('push_subscriptions')
-        .select('*')
-        .eq('user_id', userId)
-        .single();
-
-      if (error) {
-        console.error('Error getting push subscription:', error);
-        return null;
-      }
-
-      return data ? {
-        userId: data.user_id,
-        endpoint: data.endpoint,
-        p256dh: data.p256dh,
-        auth: data.auth,
-        userAgent: data.user_agent,
-        platform: data.platform
-      } : null;
+      const data = await response.json();
+      return data.subscription || null;
     } catch (error) {
       console.error('Error in getPushSubscription:', error);
       return null;

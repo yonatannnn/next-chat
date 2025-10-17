@@ -1,5 +1,4 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { notificationService } from '@/utils/notificationService';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === 'POST') {
@@ -10,30 +9,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     try {
-      // Test basic notification
-      const result = await notificationService.showNotification(
-        title,
-        body,
-        '/icons/icon-192x192.png',
-        {
-          tag: 'test-notification',
-          data: { type: type || 'test' }
+      // This is a server-side API endpoint, so we can't directly show notifications
+      // Instead, we'll return success and let the client handle the notification
+      console.log('Test notification request received:', { title, body, type });
+      
+      // Simulate processing time
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      res.status(200).json({ 
+        success: true, 
+        message: 'API endpoint working - notification should be handled by client',
+        data: {
+          title,
+          body,
+          type: type || 'test',
+          timestamp: new Date().toISOString()
         }
-      );
-
-      if (result) {
-        res.status(200).json({ 
-          success: true, 
-          message: 'Notification sent successfully' 
-        });
-      } else {
-        res.status(500).json({ 
-          success: false, 
-          message: 'Failed to send notification' 
-        });
-      }
+      });
     } catch (error: any) {
-      console.error('Error sending test notification:', error);
+      console.error('Error in test-notification API:', error);
       res.status(500).json({ 
         success: false, 
         error: error.message 

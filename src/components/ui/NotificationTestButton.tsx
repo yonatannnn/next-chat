@@ -138,7 +138,23 @@ export function NotificationTestButton() {
       const result = await response.json();
       
       if (response.ok) {
-        setLastResult('✅ API notification sent successfully!');
+        setLastResult('✅ API endpoint working! Now showing client notification...');
+        
+        // Show the actual notification on the client side
+        try {
+          await notificationService.showNotification(
+            result.data.title,
+            result.data.body,
+            '/icons/icon-192x192.png',
+            {
+              tag: 'api-test-notification',
+              data: { type: result.data.type }
+            }
+          );
+          setLastResult('✅ API endpoint working + client notification shown!');
+        } catch (notifError) {
+          setLastResult('✅ API endpoint working, but client notification failed');
+        }
       } else {
         setLastResult(`❌ API notification failed: ${result.error}`);
       }

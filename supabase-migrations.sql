@@ -1,7 +1,7 @@
 -- Create push_subscriptions table
 CREATE TABLE IF NOT EXISTS push_subscriptions (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL, -- Changed from UUID to TEXT to support Firebase Auth UIDs
   endpoint TEXT NOT NULL,
   p256dh TEXT NOT NULL,
   auth TEXT NOT NULL,
@@ -19,9 +19,14 @@ CREATE INDEX IF NOT EXISTS idx_push_subscriptions_user_id ON push_subscriptions(
 ALTER TABLE push_subscriptions ENABLE ROW LEVEL SECURITY;
 
 -- Create policy for users to manage their own subscriptions
+-- Note: This policy assumes you're using Supabase Auth. If using Firebase Auth, you may need to adjust this.
 CREATE POLICY "Users can manage their own push subscriptions" ON push_subscriptions
-  FOR ALL USING (auth.uid() = user_id);
+  FOR ALL USING (auth.uid()::text = user_id);
 
 -- Create policy for service role to access all subscriptions (for sending notifications)
 CREATE POLICY "Service role can access all push subscriptions" ON push_subscriptions
   FOR ALL USING (auth.role() = 'service_role');
+
+-- Alternative policy for Firebase Auth users (uncomment if using Firebase Auth)
+-- CREATE POLICY "Firebase users can manage their own push subscriptions" ON push_subscriptions
+--   FOR ALL USING (true); -- This allows all authenticated users to manage subscriptions
