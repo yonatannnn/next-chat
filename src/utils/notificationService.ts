@@ -20,8 +20,8 @@ import { pushNotificationService } from '@/services/pushNotificationService';
 class NotificationService {
   private permission: NotificationPermission = 'default';
   private isSupported: boolean = false;
-  private pushSupported: boolean = false;
-  private registration: ServiceWorkerRegistration | null = null;
+  public pushSupported: boolean = false;
+  public registration: ServiceWorkerRegistration | null = null;
 
   constructor() {
     if (typeof window !== 'undefined') {

@@ -13,11 +13,11 @@ export function NotificationTestButton() {
     setLastResult('Testing basic notification...');
     
     try {
-      const result = await notificationService.showNotification(
-        'Test Notification',
-        'This is a test notification from your chat app!',
-        '/icons/icon-192x192.png'
-      );
+      const result = await notificationService.showNotification({
+        title: 'Test Notification',
+        body: 'This is a test notification from your chat app!',
+        icon: '/icons/icon-192x192.png'
+      });
       
       setLastResult(result ? '✅ Basic notification sent!' : '❌ Basic notification failed');
     } catch (error) {
@@ -32,19 +32,17 @@ export function NotificationTestButton() {
     setLastResult('Testing chat notification...');
     
     try {
-      const result = await notificationService.showNotification(
-        'New Message from John',
-        'Hey! How are you doing? This is a test message.',
-        '/icons/icon-192x192.png',
-        { 
-          tag: 'chat-message',
-          data: { 
-            type: 'chat',
-            senderId: 'test-sender',
-            conversationId: 'test-conversation'
-          }
+      const result = await notificationService.showNotification({
+        title: 'New Message from John',
+        body: 'Hey! How are you doing? This is a test message.',
+        icon: '/icons/icon-192x192.png',
+        tag: 'chat-message',
+        data: { 
+          type: 'chat',
+          senderId: 'test-sender',
+          conversationId: 'test-conversation'
         }
-      );
+      });
       
       setLastResult(result ? '✅ Chat notification sent!' : '❌ Chat notification failed');
     } catch (error) {
@@ -142,15 +140,13 @@ export function NotificationTestButton() {
         
         // Show the actual notification on the client side
         try {
-          await notificationService.showNotification(
-            result.data.title,
-            result.data.body,
-            '/icons/icon-192x192.png',
-            {
-              tag: 'api-test-notification',
-              data: { type: result.data.type }
-            }
-          );
+          await notificationService.showNotification({
+            title: result.data.title,
+            body: result.data.body,
+            icon: '/icons/icon-192x192.png',
+            tag: 'api-test-notification',
+            data: { type: result.data.type }
+          });
           setLastResult('✅ API endpoint working + client notification shown!');
         } catch (notifError) {
           setLastResult('✅ API endpoint working, but client notification failed');
