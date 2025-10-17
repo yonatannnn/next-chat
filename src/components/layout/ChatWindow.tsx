@@ -58,6 +58,9 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     }
   }, [isMobileSearchOpen, setIsMobileSearchOpen]);
 
+  // Track if user has manually scrolled away from bottom
+  const [userHasScrolledUp, setUserHasScrolledUp] = useState(false);
+
   // Simple scroll detection - only track if user is at bottom
   useEffect(() => {
     const messagesContainer = document.querySelector('.messages-container');
@@ -71,6 +74,14 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       // Check if user is at the bottom (within 5px for more precision)
       const atBottom = currentScrollTop + clientHeight >= scrollHeight - 5;
       setIsAtBottom(atBottom);
+      
+      // If user scrolls up from bottom, mark that they've manually scrolled
+      if (!atBottom) {
+        setUserHasScrolledUp(true);
+      } else {
+        // If they scroll back to bottom, reset the flag
+        setUserHasScrolledUp(false);
+      }
     };
 
     // Initial check
@@ -212,10 +223,10 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           setSmoothScrollingEnabled(true);
         }, 200);
       } 
-      // When new messages are added, only auto-scroll if user is at the bottom
+      // When new messages are added, only auto-scroll if user is at the bottom AND hasn't manually scrolled up
       else if (messages.length > previousMessageCount && !isSearchOpen) {
-        // Only auto-scroll if user is at the bottom
-        if (isAtBottom) {
+        // Only auto-scroll if user is at the bottom AND hasn't manually scrolled up
+        if (isAtBottom && !userHasScrolledUp) {
           // Use direct scrollTop manipulation for better mobile compatibility
           const messagesContainer = document.querySelector('.messages-container');
           if (messagesContainer) {
@@ -232,12 +243,13 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       }
       setPreviousMessageCount(messages.length);
     }
-  }, [messages, isInitialLoad, previousMessageCount, smoothScrollingEnabled, isSearchOpen, isAtBottom]);
+  }, [messages, isInitialLoad, previousMessageCount, smoothScrollingEnabled, isSearchOpen, isAtBottom, userHasScrolledUp]);
 
   useEffect(() => {
     if (selectedUserId || selectedGroupId) {
       // Reset initial load state when switching chats
       setIsInitialLoad(true);
+      setUserHasScrolledUp(false); // Reset scroll flag when switching chats
       setPreviousMessageCount(0);
       setSmoothScrollingEnabled(false);
       
