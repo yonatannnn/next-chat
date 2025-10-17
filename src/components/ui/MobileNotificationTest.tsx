@@ -59,8 +59,6 @@ export const MobileNotificationTest: React.FC = () => {
     setTestResult('');
 
     try {
-      console.log('🧪 Testing mobile notification...');
-      
       // Check all prerequisites
       const checks = {
         notificationSupport: 'Notification' in window,
@@ -75,14 +73,11 @@ export const MobileNotificationTest: React.FC = () => {
         isAndroid: /Android/.test(navigator.userAgent)
       };
 
-      console.log('🧪 Prerequisites:', checks);
       setTestResult(`Prerequisites: ${JSON.stringify(checks, null, 2)}\n\n`);
 
       // Request permission if needed
       if (checks.permission !== 'granted') {
-        console.log('🧪 Requesting permission...');
         const newPermission = await notificationService.requestPermission();
-        console.log('🧪 New permission:', newPermission);
         
         if (newPermission !== 'granted') {
           setTestResult(prev => prev + '❌ Permission denied. Please enable notifications in your browser settings.\n\n');
@@ -121,10 +116,8 @@ export const MobileNotificationTest: React.FC = () => {
 
       if (notification) {
         setTestResult(prev => prev + '✅ Test notification sent successfully!\n');
-        console.log('🧪 Test notification created:', notification);
       } else {
         setTestResult(prev => prev + '⚠️ Notification handled by service worker\n');
-        console.log('🧪 Notification handled by service worker');
       }
 
       // Additional mobile-specific checks
@@ -135,7 +128,6 @@ export const MobileNotificationTest: React.FC = () => {
       setTestResult(prev => prev + `- Device type: ${checks.isMobile ? 'Mobile' : 'Desktop'}\n`);
 
     } catch (error) {
-      console.error('🧪 Test notification error:', error);
       setTestResult(prev => prev + `❌ Error: ${error instanceof Error ? error.message : 'Unknown error'}\n`);
     } finally {
       setIsTesting(false);

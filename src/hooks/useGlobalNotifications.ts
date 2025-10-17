@@ -24,20 +24,11 @@ export const useGlobalNotifications = () => {
       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
       const isAndroid = /Android/.test(navigator.userAgent);
       
-      console.log('🔔 PWA Context:', isPWA);
-      console.log('🔔 Mobile Device:', isMobile);
-      console.log('🔔 iOS Device:', isIOS);
-      console.log('🔔 Android Device:', isAndroid);
-      console.log('🔔 Service Worker Support:', 'serviceWorker' in navigator);
-      console.log('🔔 Notification Support:', 'Notification' in window);
       
       // For mobile devices, we need to ensure the page is visible and focused
       if (isMobile && document.visibilityState === 'hidden') {
-        console.log('🔔 Mobile device detected but page is hidden, waiting for visibility...');
-        
         const handleVisibilityChange = () => {
           if (document.visibilityState === 'visible') {
-            console.log('🔔 Page became visible, requesting permission...');
             requestNotificationPermission();
             document.removeEventListener('visibilitychange', handleVisibilityChange);
           }
@@ -54,22 +45,15 @@ export const useGlobalNotifications = () => {
   const requestNotificationPermission = async () => {
     try {
       const permission = await notificationService.requestPermission();
-      console.log('🔔 Permission result:', permission);
       
       if (permission === 'granted') {
-        console.log('✅ Notification permission granted');
-        
         // Test notification capability
-        if (notificationService.canNotify()) {
-          console.log('✅ Notifications are ready');
-        } else {
-          console.warn('⚠️ Notifications not ready despite permission');
+        if (!notificationService.canNotify()) {
+          console.warn('Notifications not ready despite permission');
         }
-      } else {
-        console.log('❌ Notification permission denied or default');
       }
     } catch (error) {
-      console.error('❌ Error requesting notification permission:', error);
+      console.error('Error requesting notification permission:', error);
     }
   };
 

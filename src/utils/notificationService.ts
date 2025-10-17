@@ -101,7 +101,6 @@ class NotificationService {
       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
       const isAndroid = /Android/.test(navigator.userAgent);
       
-      console.log('Device info:', { isMobile, isIOS, isAndroid });
 
       // Check if service worker is available for PWA notifications
       if ('serviceWorker' in navigator && 'Notification' in window) {
