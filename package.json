@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:no-pwa": "DISABLE_PWA=true next dev",
     "dev:https": "HTTPS=true npm run dev",
     "build": "next build",
     "start": "next start -p 8080",

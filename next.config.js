@@ -2,9 +2,14 @@ const withPWA = require('next-pwa')({
   dest: 'public',
   register: true,
   skipWaiting: true,
-  disable: process.env.NODE_ENV === 'development' && process.env.DISABLE_PWA === 'true',
+  // Disable PWA in development to avoid workbox watch mode issues
+  disable: process.env.NODE_ENV === 'development',
   buildExcludes: [/middleware-manifest\.json$/],
   sw: 'sw.js', // Use our custom service worker
+  // Fix for webpack watch mode issues
+  reloadOnOnline: false,
+  // Prevent multiple service worker generation in watch mode
+  publicExcludes: ['!robots.txt', '!sitemap.xml'],
   runtimeCaching: [
     {
       urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
@@ -138,6 +143,12 @@ const nextConfig = {
   env: {
     NEXT_PUBLIC_BACKEND_URL: process.env.NEXT_PUBLIC_BACKEND_URL || 'https://web-production-ac2a6.up.railway.app',
   },
+  // Disable PWA in development to avoid workbox watch mode issues
+  ...(process.env.NODE_ENV === 'development' && {
+    experimental: {
+      esmExternals: false
+    }
+  }),
 };
 
 module.exports = withPWA(nextConfig);
