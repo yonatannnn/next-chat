@@ -106,8 +106,9 @@ class NotificationService {
 
     try {
       const vapidKey = this.urlBase64ToArrayBuffer(
-        'BEl62iUYgUivxIkv69yViEuiBIa40HI0lYbL1VU2XD0X8rVUuX8qVuYBTj3vU4d0y_0VpTYA8Yk4n7wU8iU0V'
+        'BPyk4E4ejKjRE1aYPFz7NwfYse_xhdOoBgZHjiwOz3AjTho8EtPxNvRnDFDCGBh3XKRzm5p55BdLhajnPpV4KRI'
       );
+      
       
       const subscription = await this.registration.pushManager.subscribe({
         userVisibleOnly: true,
