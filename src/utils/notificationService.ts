@@ -207,7 +207,7 @@ class NotificationService {
         options: {
           body: data.body,
           icon: this.getAbsoluteUrl(data.icon || '/icons/icon-192x192.png'),
-          badge: this.getAbsoluteUrl(data.badge || '/icons/icon-72x72.png'),
+          badge: undefined,
           tag: data.tag,
           data: data.data,
           requireInteraction: true,
@@ -270,7 +270,7 @@ class NotificationService {
       const notificationOptions: EnhancedNotificationOptions = {
         body: data.body,
         icon: this.getAbsoluteUrl(data.icon || '/icons/icon-192x192.png'),
-        badge: this.getAbsoluteUrl(data.badge || '/icons/icon-72x72.png'),
+        badge: undefined,
         tag: data.tag,
         data: data.data,
         requireInteraction: false,

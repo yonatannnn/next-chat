@@ -441,7 +441,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
 
   const handleSendMessage = async (text: string, fileUrl?: string, fileUrls?: string[], replyTo?: any) => {
     if (selectedUserId) {
-      await sendMessage(text, fileUrl, fileUrls, replyTo);
+      await sendMessage(text, fileUrl, fileUrls, replyTo, undefined, undefined, undefined, userData?.username);
     } else if (selectedGroupId) {
       await sendGroupMessage(text, fileUrl, fileUrls, replyTo);
     }
@@ -577,7 +577,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       // Send personal message to recommender
       console.log('Sending acceptance message...');
       if (selectedUserId) {
-        await sendMessage("✅ Profile picture recommendation accepted.");
+        await sendMessage("✅ Profile picture recommendation accepted.", undefined, undefined, undefined, undefined, undefined, undefined, userData?.username);
       } else if (selectedGroupId) {
         await sendGroupMessage("✅ Profile picture recommendation accepted.");
       }
@@ -597,7 +597,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       // Send personal message to recommender
       console.log('Sending rejection message...');
       if (selectedUserId) {
-        await sendMessage("❌ Profile picture recommendation rejected.");
+        await sendMessage("❌ Profile picture recommendation rejected.", undefined, undefined, undefined, undefined, undefined, undefined, userData?.username);
       } else if (selectedGroupId) {
         await sendGroupMessage("❌ Profile picture recommendation rejected.");
       }

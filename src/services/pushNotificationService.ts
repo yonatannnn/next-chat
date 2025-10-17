@@ -138,7 +138,7 @@ class PushNotificationService {
       title: `${senderName}`,
       body: truncatedMessage,
       icon: '/icons/icon-192x192.png',
-      badge: '/icons/icon-72x72.png',
+      badge: undefined,
       tag: `chat-${senderId}`,
       data: {
         type: 'chat',

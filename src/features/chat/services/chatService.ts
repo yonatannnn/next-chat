@@ -18,7 +18,7 @@ import { Message } from '../store/chatStore';
 import { pushNotificationService } from '@/services/pushNotificationService';
 
 export const chatService = {
-  async sendMessage(senderId: string, receiverId: string, text: string, fileUrl?: string, fileUrls?: string[], replyTo?: any, voiceUrl?: string, voiceDuration?: number, messageType?: 'system') {
+  async sendMessage(senderId: string, receiverId: string, text: string, fileUrl?: string, fileUrls?: string[], replyTo?: any, voiceUrl?: string, voiceDuration?: number, messageType?: 'system', senderName?: string) {
     if (!db) {
       throw new Error('Firebase not initialized');
     }
@@ -47,12 +47,12 @@ export const chatService = {
       if (messageType !== 'system') {
         try {
           // Get sender name for notification
-          const senderName = 'Someone'; // You might want to get this from user data
+          const notificationSenderName = senderName || 'Someone';
           
           // Send push notification in background
           pushNotificationService.sendChatNotification(
             receiverId,
-            senderName,
+            notificationSenderName,
             text,
             senderId
           ).catch(error => {
