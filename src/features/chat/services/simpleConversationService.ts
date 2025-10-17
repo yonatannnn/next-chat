@@ -72,6 +72,17 @@ export const simpleConversationService = {
                 return (data.senderId === currentUserId && data.receiverId === userId) ||
                        (data.senderId === userId && data.receiverId === currentUserId);
               });
+
+              // Check if conversation was deleted (has CONVERSATION_DELETED message)
+              const hasDeletedMessage = conversationMessages.some(msg => {
+                const data = msg.data();
+                return data.text === 'CONVERSATION_DELETED' && data.isSystemMessage;
+              });
+
+              // Skip this conversation if it was deleted
+              if (hasDeletedMessage) {
+                return; // Skip this iteration
+              }
               
               // Sort by timestamp to get the latest message
               conversationMessages.sort((a, b) => {

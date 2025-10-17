@@ -60,6 +60,11 @@ export const conversationService = {
             const conversationSnapshot = await getDocs(conversationQuery);
             const latestMessage = conversationSnapshot.empty ? null : conversationSnapshot.docs[0].data();
             
+            // Check if conversation was deleted (has CONVERSATION_DELETED message)
+            if (latestMessage && latestMessage.text === 'CONVERSATION_DELETED' && latestMessage.isSystemMessage) {
+              continue; // Skip this conversation if it was deleted
+            }
+            
             // Count unread messages (messages sent to current user that they haven't read)
             const unreadQuery = query(
               messagesRef,

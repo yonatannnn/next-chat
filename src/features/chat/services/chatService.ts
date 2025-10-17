@@ -10,7 +10,8 @@ import {
   doc,
   serverTimestamp,
   getDocs,
-  limit
+  limit,
+  setDoc
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Message } from '../store/chatStore';
@@ -230,6 +231,30 @@ export const chatService = {
       });
 
       await Promise.all(deletePromises);
+
+      // Add a special "deleted" message to mark the conversation as deleted
+      // This ensures the conversation disappears from both users' chat lists
+      const deletedMessageRef = doc(collection(db!, 'messages'));
+      await setDoc(deletedMessageRef, {
+        senderId: userId1,
+        receiverId: userId2,
+        text: 'CONVERSATION_DELETED',
+        timestamp: serverTimestamp(),
+        deleted: true,
+        isSystemMessage: true
+      });
+
+      // Also add the reverse message for the other user
+      const deletedMessageRef2 = doc(collection(db!, 'messages'));
+      await setDoc(deletedMessageRef2, {
+        senderId: userId2,
+        receiverId: userId1,
+        text: 'CONVERSATION_DELETED',
+        timestamp: serverTimestamp(),
+        deleted: true,
+        isSystemMessage: true
+      });
+
     } catch (error: unknown) {
       if (error instanceof Error && error.message.includes('resource-exhausted')) {
         throw new Error('Service temporarily unavailable. Please try again later.');
