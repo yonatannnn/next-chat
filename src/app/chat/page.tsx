@@ -8,6 +8,7 @@ import { useAuth } from '@/features/auth/hooks/useAuth';
 import { useUsers } from '@/features/users/hooks/useUsers';
 import { useChatStore } from '@/features/chat/store/chatStore';
 import { useChat } from '@/features/chat/hooks/useChat';
+import { chatService } from '@/features/chat/services/chatService';
 import { useGlobalNotifications } from '@/hooks/useGlobalNotifications';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { DropdownMenu } from '@/components/ui/DropdownMenu';
@@ -60,6 +61,21 @@ export default function ChatPage() {
 
   const cancelHardHide = () => {
     setShowHardHideConfirm(false);
+  };
+
+  const handleDeleteChat = async () => {
+    if (selectedUserId && userData?.id && window.confirm('Are you sure you want to delete this chat? This action cannot be undone.')) {
+      try {
+        // Delete all messages between the two users
+        await chatService.deleteAllMessages(userData.id, selectedUserId);
+        // Clear the selected user
+        setSelectedUserId(null);
+        setIsSidebarOpen(true);
+      } catch (error) {
+        console.error('Error deleting chat:', error);
+        alert('Failed to delete chat. Please try again.');
+      }
+    }
   };
 
   useEffect(() => {
@@ -276,9 +292,7 @@ export default function ChatPage() {
                     id: 'delete-chat',
                     label: 'Delete Chat',
                     icon: <Trash2 size={16} />,
-                    onClick: () => {
-                      console.log('Delete chat clicked');
-                    },
+                    onClick: handleDeleteChat,
                     variant: 'danger' as const,
                   }
                 ]),
