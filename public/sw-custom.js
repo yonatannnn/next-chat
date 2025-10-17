@@ -1,153 +1,101 @@
-// Custom service worker for PWA notifications
-const CACHE_NAME = 'next-chat-v1';
-const NOTIFICATION_TAG = 'next-chat-notification';
+/**
+ * Copyright 2018 Google Inc. All Rights Reserved.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
-// Install event
-self.addEventListener('install', (event) => {
-  console.log('Service Worker: Install');
-  self.skipWaiting();
-});
+// If the loader is already loaded, just stop.
+if (!self.define) {
+  let registry = {};
 
-// Activate event
-self.addEventListener('activate', (event) => {
-  console.log('Service Worker: Activate');
-  event.waitUntil(self.clients.claim());
-});
+  // Used for `eval` and `importScripts` where we can't get script URL by other means.
+  // In both cases, it's safe to use a global var because those functions are synchronous.
+  let nextDefineUri;
 
-// Handle push events for notifications
-self.addEventListener('push', (event) => {
-  console.log('Service Worker: Push received');
-  
-  if (event.data) {
-    const data = event.data.json();
-    const options = {
-      body: data.body,
-      icon: data.icon || '/icons/icon-192x192.png',
-      badge: data.badge || '/icons/icon-72x72.png',
-      tag: data.tag || NOTIFICATION_TAG,
-      data: data.data,
-      requireInteraction: true,
-      silent: false,
-      vibrate: [200, 100, 200], // Vibration pattern for mobile
-      actions: [
-        {
-          action: 'open',
-          title: 'Open Chat'
-        },
-        {
-          action: 'close',
-          title: 'Dismiss'
-        }
-      ]
-    };
-
-    event.waitUntil(
-      self.registration.showNotification(data.title, options)
-        .then(() => {
-          console.log('Service Worker: Notification shown successfully');
-        })
-        .catch(error => {
-          console.error('Service Worker: Error showing notification:', error);
-        })
-    );
-  }
-});
-
-// Handle notification clicks
-self.addEventListener('notificationclick', (event) => {
-  console.log('Service Worker: Notification clicked');
-  
-  event.notification.close();
-
-  if (event.action === 'close') {
-    return;
-  }
-
-  // Handle notification click - focus or open the app
-  event.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true })
-      .then((clients) => {
-        // If there's already a window open, focus it
-        for (const client of clients) {
-          if (client.url.includes(self.location.origin) && 'focus' in client) {
-            return client.focus();
+  const singleRequire = (uri, parentUri) => {
+    uri = new URL(uri + ".js", parentUri).href;
+    return registry[uri] || (
+      
+        new Promise(resolve => {
+          if ("document" in self) {
+            const script = document.createElement("script");
+            script.src = uri;
+            script.onload = resolve;
+            document.head.appendChild(script);
+          } else {
+            nextDefineUri = uri;
+            importScripts(uri);
+            resolve();
           }
+        })
+      
+      .then(() => {
+        let promise = registry[uri];
+        if (!promise) {
+          throw new Error(`Module ${uri} didn’t register its module`);
         }
-        
-        // Otherwise, open a new window
-        if (self.clients.openWindow) {
-          const urlToOpen = event.notification.data?.url || '/chat';
-          return self.clients.openWindow(urlToOpen);
-        }
+        return promise;
       })
-  );
-});
-
-// Handle background sync for offline messages
-self.addEventListener('sync', (event) => {
-  console.log('Service Worker: Background sync');
-  
-  if (event.tag === 'background-sync') {
-    event.waitUntil(
-      // Handle any pending operations when back online
-      handleBackgroundSync()
     );
-  }
-});
+  };
 
-// Handle messages from the main thread
-self.addEventListener('message', (event) => {
-  console.log('Service Worker: Message received', event.data);
-  
-  if (event.data && event.data.action === 'closeNotificationsByTag') {
-    self.registration.getNotifications({ tag: event.data.tag })
-      .then(notifications => {
-        notifications.forEach(notification => notification.close());
-      });
-  }
-  
-  if (event.data && event.data.action === 'showNotification') {
-    const { title, options } = event.data;
-    event.waitUntil(
-      self.registration.showNotification(title, options)
-    );
-  }
-});
-
-// Background sync handler
-async function handleBackgroundSync() {
-  try {
-    // This is where you would handle any pending operations
-    // like sending queued messages, syncing data, etc.
-    console.log('Service Worker: Handling background sync');
-  } catch (error) {
-    console.error('Service Worker: Background sync error', error);
-  }
+  self.define = (depsNames, factory) => {
+    const uri = nextDefineUri || ("document" in self ? document.currentScript.src : "") || location.href;
+    if (registry[uri]) {
+      // Module is already loading or loaded.
+      return;
+    }
+    let exports = {};
+    const require = depUri => singleRequire(depUri, uri);
+    const specialDeps = {
+      module: { uri },
+      exports,
+      require
+    };
+    registry[uri] = Promise.all(depsNames.map(
+      depName => specialDeps[depName] || require(depName)
+    )).then(deps => {
+      factory(...deps);
+      return exports;
+    });
+  };
 }
+define(['./workbox-e43f5367'], (function (workbox) { 'use strict';
 
-// Cache management
-self.addEventListener('fetch', (event) => {
-  // Only handle GET requests
-  if (event.request.method !== 'GET') {
-    return;
-  }
-
-  // Skip cross-origin requests
-  if (!event.request.url.startsWith(self.location.origin)) {
-    return;
-  }
-
-  event.respondWith(
-    caches.match(event.request)
-      .then((response) => {
-        // Return cached version or fetch from network
-        return response || fetch(event.request);
-      })
-      .catch(() => {
-        // Return offline page for navigation requests
-        if (event.request.mode === 'navigate') {
-          return caches.match('/offline');
+  importScripts();
+  self.skipWaiting();
+  workbox.clientsClaim();
+  workbox.registerRoute("/", new workbox.NetworkFirst({
+    "cacheName": "start-url",
+    plugins: [{
+      cacheWillUpdate: async ({
+        request,
+        response,
+        event,
+        state
+      }) => {
+        if (response && response.type === 'opaqueredirect') {
+          return new Response(response.body, {
+            status: 200,
+            statusText: 'OK',
+            headers: response.headers
+          });
         }
-      })
-  );
-});
+        return response;
+      }
+    }]
+  }), 'GET');
+  workbox.registerRoute(/.*/i, new workbox.NetworkOnly({
+    "cacheName": "dev",
+    plugins: []
+  }), 'GET');
+
+}));
+//# sourceMappingURL=sw-custom.js.map

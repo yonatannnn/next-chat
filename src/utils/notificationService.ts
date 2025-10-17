@@ -40,6 +40,19 @@ class NotificationService {
           return 'denied';
         }
 
+        // Check if we're on a mobile device
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+        
+        if (isMobile) {
+          console.log('Mobile device detected, requesting notification permission...');
+          
+          // For iOS Safari, we need to ensure the user gesture is recent
+          if (isIOS) {
+            console.log('iOS device detected, ensuring proper user interaction...');
+          }
+        }
+
         this.permission = await Notification.requestPermission();
         console.log('Notification permission result:', this.permission);
         
@@ -48,6 +61,11 @@ class NotificationService {
           try {
             const registration = await navigator.serviceWorker.ready;
             console.log('Service worker ready for notifications:', !!registration);
+            
+            // Test if service worker can show notifications
+            if (registration.active) {
+              console.log('Service worker is active and ready for notifications');
+            }
           } catch (error) {
             console.error('Service worker not ready:', error);
           }
@@ -78,12 +96,21 @@ class NotificationService {
     }
 
     try {
+      // Check if we're on a mobile device
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      const isAndroid = /Android/.test(navigator.userAgent);
+      
+      console.log('Device info:', { isMobile, isIOS, isAndroid });
+
       // Check if service worker is available for PWA notifications
       if ('serviceWorker' in navigator && 'Notification' in window) {
         try {
           const registration = await navigator.serviceWorker.ready;
           
           if (registration.active) {
+            console.log('Using service worker for notification');
+            
             // Use service worker for PWA notifications
             const notificationOptions = {
               body: data.body,
@@ -93,8 +120,8 @@ class NotificationService {
               data: data.data,
               requireInteraction: true,
               silent: false,
-              vibrate: [200, 100, 200], // Mobile vibration
-              actions: [
+              vibrate: isMobile ? [200, 100, 200] : undefined, // Mobile vibration
+              actions: isMobile ? [
                 {
                   action: 'open',
                   title: 'Open Chat'
@@ -103,7 +130,7 @@ class NotificationService {
                   action: 'close',
                   title: 'Dismiss'
                 }
-              ]
+              ] : undefined
             };
 
             // Send message to service worker to show notification
@@ -122,7 +149,9 @@ class NotificationService {
       }
 
       // Fallback to regular notification API
-      const notification = new Notification(data.title, {
+      console.log('Using regular notification API');
+      
+      const notificationOptions: NotificationOptions = {
         body: data.body,
         icon: data.icon || '/icons/icon-192x192.png',
         badge: data.badge || '/icons/icon-72x72.png',
@@ -130,7 +159,28 @@ class NotificationService {
         data: data.data,
         requireInteraction: true,
         silent: false,
-      });
+      };
+
+      // Add vibration for mobile devices
+      if (isMobile && 'vibrate' in navigator) {
+        (notificationOptions as any).vibrate = [200, 100, 200];
+      }
+
+      // Add actions for mobile devices
+      if (isMobile) {
+        (notificationOptions as any).actions = [
+          {
+            action: 'open',
+            title: 'Open Chat'
+          },
+          {
+            action: 'close',
+            title: 'Dismiss'
+          }
+        ];
+      }
+
+      const notification = new Notification(data.title, notificationOptions);
 
       // Handle notification click
       notification.onclick = () => {

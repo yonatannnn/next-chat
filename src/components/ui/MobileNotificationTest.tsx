@@ -67,7 +67,12 @@ export const MobileNotificationTest: React.FC = () => {
         serviceWorkerSupport: 'serviceWorker' in navigator,
         pageVisible: document.visibilityState === 'visible',
         pageFocused: document.hasFocus(),
-        permission: notificationService.getPermission()
+        permission: notificationService.getPermission(),
+        isPWA: window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true,
+        userAgent: navigator.userAgent,
+        isMobile: /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent),
+        isIOS: /iPad|iPhone|iPod/.test(navigator.userAgent),
+        isAndroid: /Android/.test(navigator.userAgent)
       };
 
       console.log('🧪 Prerequisites:', checks);
@@ -80,8 +85,29 @@ export const MobileNotificationTest: React.FC = () => {
         console.log('🧪 New permission:', newPermission);
         
         if (newPermission !== 'granted') {
-          setTestResult(prev => prev + '❌ Permission denied. Please enable notifications in your browser settings.');
+          setTestResult(prev => prev + '❌ Permission denied. Please enable notifications in your browser settings.\n\n');
+          setTestResult(prev => prev + '📱 Mobile-specific tips:\n');
+          setTestResult(prev => prev + '- Make sure you\'re using a supported browser (Chrome, Firefox, Safari)\n');
+          setTestResult(prev => prev + '- For iOS: Use Safari and ensure the site is added to home screen\n');
+          setTestResult(prev => prev + '- For Android: Use Chrome and ensure notifications are enabled in browser settings\n');
+          setTestResult(prev => prev + '- Try refreshing the page and granting permission again\n');
           return;
+        }
+      }
+
+      // Test service worker status
+      if ('serviceWorker' in navigator) {
+        try {
+          const registration = await navigator.serviceWorker.getRegistration();
+          if (registration) {
+            setTestResult(prev => prev + `✅ Service Worker: Registered\n`);
+            setTestResult(prev => prev + `   - Active: ${registration.active ? 'Yes' : 'No'}\n`);
+            setTestResult(prev => prev + `   - State: ${registration.active?.state || 'N/A'}\n`);
+          } else {
+            setTestResult(prev => prev + `⚠️ Service Worker: Not registered\n`);
+          }
+        } catch (swError) {
+          setTestResult(prev => prev + `❌ Service Worker Error: ${swError}\n`);
         }
       }
 
@@ -94,16 +120,23 @@ export const MobileNotificationTest: React.FC = () => {
       });
 
       if (notification) {
-        setTestResult(prev => prev + '✅ Test notification sent successfully!');
+        setTestResult(prev => prev + '✅ Test notification sent successfully!\n');
         console.log('🧪 Test notification created:', notification);
       } else {
-        setTestResult(prev => prev + '⚠️ Notification handled by service worker');
+        setTestResult(prev => prev + '⚠️ Notification handled by service worker\n');
         console.log('🧪 Notification handled by service worker');
       }
 
+      // Additional mobile-specific checks
+      setTestResult(prev => prev + '\n📱 Mobile-specific checks:\n');
+      setTestResult(prev => prev + `- Page visibility: ${document.visibilityState}\n`);
+      setTestResult(prev => prev + `- Page focused: ${document.hasFocus()}\n`);
+      setTestResult(prev => prev + `- PWA mode: ${checks.isPWA}\n`);
+      setTestResult(prev => prev + `- Device type: ${checks.isMobile ? 'Mobile' : 'Desktop'}\n`);
+
     } catch (error) {
       console.error('🧪 Test notification error:', error);
-      setTestResult(prev => prev + `❌ Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setTestResult(prev => prev + `❌ Error: ${error instanceof Error ? error.message : 'Unknown error'}\n`);
     } finally {
       setIsTesting(false);
     }
