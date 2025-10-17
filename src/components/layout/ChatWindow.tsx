@@ -60,13 +60,21 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
 
   // Track if user has manually scrolled away from bottom
   const [userHasScrolledUp, setUserHasScrolledUp] = useState(false);
+  // Track if user is actively scrolling to prevent interference
+  const [isUserActivelyScrolling, setIsUserActivelyScrolling] = useState(false);
 
   // Simple scroll detection - only track if user is at bottom
   useEffect(() => {
     const messagesContainer = document.querySelector('.messages-container');
     if (!messagesContainer) return;
 
+    let scrollTimeout: NodeJS.Timeout;
+
     const handleScroll = () => {
+      // Mark that user is actively scrolling
+      setIsUserActivelyScrolling(true);
+      clearTimeout(scrollTimeout);
+      
       const currentScrollTop = messagesContainer.scrollTop;
       const scrollHeight = messagesContainer.scrollHeight;
       const clientHeight = messagesContainer.clientHeight;
@@ -82,6 +90,11 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         // If they scroll back to bottom, reset the flag
         setUserHasScrolledUp(false);
       }
+
+      // Reset active scrolling flag after scroll ends
+      scrollTimeout = setTimeout(() => {
+        setIsUserActivelyScrolling(false);
+      }, 150);
     };
 
     // Initial check
@@ -91,6 +104,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     
     return () => {
       messagesContainer.removeEventListener('scroll', handleScroll);
+      clearTimeout(scrollTimeout);
     };
   }, []);
 
@@ -223,10 +237,10 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           setSmoothScrollingEnabled(true);
         }, 200);
       } 
-      // When new messages are added, only auto-scroll if user is at the bottom AND hasn't manually scrolled up
+      // When new messages are added, only auto-scroll if user is at the bottom AND hasn't manually scrolled up AND not actively scrolling
       else if (messages.length > previousMessageCount && !isSearchOpen) {
-        // Only auto-scroll if user is at the bottom AND hasn't manually scrolled up
-        if (isAtBottom && !userHasScrolledUp) {
+        // Only auto-scroll if user is at the bottom AND hasn't manually scrolled up AND not actively scrolling
+        if (isAtBottom && !userHasScrolledUp && !isUserActivelyScrolling) {
           // Use direct scrollTop manipulation for better mobile compatibility
           const messagesContainer = document.querySelector('.messages-container');
           if (messagesContainer) {
@@ -243,13 +257,14 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       }
       setPreviousMessageCount(messages.length);
     }
-  }, [messages, isInitialLoad, previousMessageCount, smoothScrollingEnabled, isSearchOpen, isAtBottom, userHasScrolledUp]);
+  }, [messages, isInitialLoad, previousMessageCount, smoothScrollingEnabled, isSearchOpen, isAtBottom, userHasScrolledUp, isUserActivelyScrolling]);
 
   useEffect(() => {
     if (selectedUserId || selectedGroupId) {
       // Reset initial load state when switching chats
       setIsInitialLoad(true);
       setUserHasScrolledUp(false); // Reset scroll flag when switching chats
+      setIsUserActivelyScrolling(false); // Reset active scrolling flag
       setPreviousMessageCount(0);
       setSmoothScrollingEnabled(false);
       
