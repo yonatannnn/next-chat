@@ -16,6 +16,7 @@ import { Avatar } from '@/components/ui/Avatar';
 import { ChatInfoModal } from '@/components/ui/ChatInfoModal';
 import { MobileNotificationTest } from '@/components/ui/MobileNotificationTest';
 import { MobilePushNotificationTest } from '@/components/ui/MobilePushNotificationTest';
+import { NotificationTestButton } from '@/components/ui/NotificationTestButton';
 import { Menu, X, Info, Users, Trash2, Search, EyeOff, Lock, AlertTriangle } from 'lucide-react';
 
 // Force dynamic rendering
@@ -149,6 +150,9 @@ export default function ChatPage() {
           <MobilePushNotificationTest />
         </div>
       )}
+      
+      {/* Notification Test Button - Always visible for testing */}
+      <NotificationTestButton />
       {/* Mobile Header */}
       <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
         {selectedUserId || selectedGroupId ? (
