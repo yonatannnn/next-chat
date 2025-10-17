@@ -306,8 +306,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       
       if (isPWA && document.visibilityState === 'visible' && 
           (selectedUserId || selectedGroupId) && userData?.id && messages.length > 0) {
-        console.log('PWA became visible, checking for unseen messages...');
-        
         // Small delay to ensure user is actually viewing the chat
         setTimeout(() => {
           if (selectedUserId) {
@@ -318,8 +316,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
             );
 
             if (unseenMessages.length > 0) {
-              console.log(`PWA visibility: Marking ${unseenMessages.length} messages as seen for user ${selectedUserId}`);
-              
               unseenMessages.forEach(async (message) => {
                 try {
                   await chatService.markMessageAsSeen(message.id);
@@ -338,8 +334,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
             );
 
             if (unseenMessages.length > 0) {
-              console.log(`PWA visibility: Marking ${unseenMessages.length} group messages as seen for group ${selectedGroupId}`);
-              
               unseenMessages.forEach(async (message) => {
                 try {
                   await groupChatService.markGroupMessageAsSeen(message.id);
@@ -401,8 +395,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
 
           // Only mark as seen if there are actually unseen messages
           if (unseenMessages.length > 0) {
-            console.log(`Marking ${unseenMessages.length} messages as seen for user ${selectedUserId}`);
-            
             // Mark each unseen incoming message as seen
             unseenMessages.forEach(async (message) => {
               try {
@@ -426,8 +418,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
 
           // Only mark as seen if there are actually unseen messages
           if (unseenMessages.length > 0) {
-            console.log(`Marking ${unseenMessages.length} group messages as seen for group ${selectedGroupId}`);
-            
             // Mark each unseen group message as seen
             unseenMessages.forEach(async (message) => {
               try {
