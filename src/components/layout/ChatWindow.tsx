@@ -62,6 +62,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   const [userHasScrolledUp, setUserHasScrolledUp] = useState(false);
   // Track if user is actively scrolling to prevent interference
   const [isUserActivelyScrolling, setIsUserActivelyScrolling] = useState(false);
+  // Track previous chat to only reset scroll when actually switching chats
+  const [previousChatId, setPreviousChatId] = useState<string | null>(null);
 
   // Simple scroll detection - only track if user is at bottom
   useEffect(() => {
@@ -261,12 +263,24 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
 
   useEffect(() => {
     if (selectedUserId || selectedGroupId) {
-      // Reset initial load state when switching chats
-      setIsInitialLoad(true);
-      setUserHasScrolledUp(false); // Reset scroll flag when switching chats
-      setIsUserActivelyScrolling(false); // Reset active scrolling flag
-      setPreviousMessageCount(0);
-      setSmoothScrollingEnabled(false);
+      // Get current chat ID
+      const currentChatId = selectedUserId || selectedGroupId;
+      
+      // Only reset scroll state when actually switching to a different chat
+      if (currentChatId !== previousChatId) {
+        console.log('Switching to different chat:', currentChatId, 'from:', previousChatId);
+        // Reset initial load state when switching chats
+        setIsInitialLoad(true);
+        setUserHasScrolledUp(false); // Reset scroll flag when switching chats
+        setIsUserActivelyScrolling(false); // Reset active scrolling flag
+        setPreviousMessageCount(0);
+        setSmoothScrollingEnabled(false);
+        
+        // Update previous chat ID
+        setPreviousChatId(currentChatId);
+      } else {
+        console.log('Same chat, not resetting scroll state');
+      }
       
       // Only mark as seen if there are unread messages
       if (selectedUserId) {
@@ -281,7 +295,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         }
       }
     }
-  }, [selectedUserId, selectedGroupId, conversations, groupConversations, markAsSeen, markGroupAsSeen]);
+  }, [selectedUserId, selectedGroupId, previousChatId, conversations, groupConversations, markAsSeen, markGroupAsSeen]);
 
   // Track when user is actually viewing the chat (not just selected)
   const [isUserViewingChat, setIsUserViewingChat] = useState(false);
