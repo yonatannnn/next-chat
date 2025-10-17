@@ -87,30 +87,36 @@ export const chatService = {
     );
 
     return onSnapshot(q, (snapshot) => {
-      const messages: Message[] = snapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          senderId: data.senderId,
-          receiverId: data.receiverId,
-          text: data.text,
-          fileUrl: data.fileUrl,
-          fileUrls: data.fileUrls,
-          timestamp: data.timestamp?.toDate() || new Date(),
-          edited: data.edited || false,
-          editedAt: data.editedAt?.toDate(),
-          deleted: data.deleted || false,
-          replyTo: data.replyTo || null,
-          isForwarded: data.isForwarded || false,
-          originalSenderId: data.originalSenderId || null,
-          originalSenderName: data.originalSenderName || null,
-          forwardedBy: data.forwardedBy || null,
-          voiceUrl: data.voiceUrl || null,
-          voiceDuration: data.voiceDuration || null,
-          seen: data.seen || false,
-          seenAt: data.seenAt?.toDate(),
-        };
-      });
+      const messages: Message[] = snapshot.docs
+        .filter(doc => {
+          const data = doc.data();
+          // Filter out CONVERSATION_DELETED system messages
+          return !(data.text === 'CONVERSATION_DELETED' && data.isSystemMessage);
+        })
+        .map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            senderId: data.senderId,
+            receiverId: data.receiverId,
+            text: data.text,
+            fileUrl: data.fileUrl,
+            fileUrls: data.fileUrls,
+            timestamp: data.timestamp?.toDate() || new Date(),
+            edited: data.edited || false,
+            editedAt: data.editedAt?.toDate(),
+            deleted: data.deleted || false,
+            replyTo: data.replyTo || null,
+            isForwarded: data.isForwarded || false,
+            originalSenderId: data.originalSenderId || null,
+            originalSenderName: data.originalSenderName || null,
+            forwardedBy: data.forwardedBy || null,
+            voiceUrl: data.voiceUrl || null,
+            voiceDuration: data.voiceDuration || null,
+            seen: data.seen || false,
+            seenAt: data.seenAt?.toDate(),
+          };
+        });
       callback(messages);
     });
   },
@@ -128,30 +134,36 @@ export const chatService = {
     );
 
     return onSnapshot(q, (snapshot) => {
-      const messages: Message[] = snapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          senderId: data.senderId,
-          receiverId: data.receiverId,
-          text: data.text,
-          fileUrl: data.fileUrl,
-          fileUrls: data.fileUrls,
-          timestamp: data.timestamp?.toDate() || new Date(),
-          edited: data.edited || false,
-          editedAt: data.editedAt?.toDate(),
-          deleted: data.deleted || false,
-          replyTo: data.replyTo || null,
-          isForwarded: data.isForwarded || false,
-          originalSenderId: data.originalSenderId || null,
-          originalSenderName: data.originalSenderName || null,
-          forwardedBy: data.forwardedBy || null,
-          voiceUrl: data.voiceUrl || null,
-          voiceDuration: data.voiceDuration || null,
-          seen: data.seen || false,
-          seenAt: data.seenAt?.toDate(),
-        };
-      });
+      const messages: Message[] = snapshot.docs
+        .filter(doc => {
+          const data = doc.data();
+          // Filter out CONVERSATION_DELETED system messages
+          return !(data.text === 'CONVERSATION_DELETED' && data.isSystemMessage);
+        })
+        .map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            senderId: data.senderId,
+            receiverId: data.receiverId,
+            text: data.text,
+            fileUrl: data.fileUrl,
+            fileUrls: data.fileUrls,
+            timestamp: data.timestamp?.toDate() || new Date(),
+            edited: data.edited || false,
+            editedAt: data.editedAt?.toDate(),
+            deleted: data.deleted || false,
+            replyTo: data.replyTo || null,
+            isForwarded: data.isForwarded || false,
+            originalSenderId: data.originalSenderId || null,
+            originalSenderName: data.originalSenderName || null,
+            forwardedBy: data.forwardedBy || null,
+            voiceUrl: data.voiceUrl || null,
+            voiceDuration: data.voiceDuration || null,
+            seen: data.seen || false,
+            seenAt: data.seenAt?.toDate(),
+          };
+        });
       
       // Return all messages, let the notification hook handle filtering
       callback(messages);

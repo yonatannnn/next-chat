@@ -65,31 +65,52 @@ export const improvedConversationService = {
             });
 
             // Check if conversation was deleted (has CONVERSATION_DELETED message)
-            const hasDeletedMessage = conversationMessages.some(msg => {
+            const deletedMessages = conversationMessages.filter(msg => {
               const data = msg.data();
               return data.text === 'CONVERSATION_DELETED' && data.isSystemMessage;
             });
 
-            // Skip this conversation if it was deleted
-            if (hasDeletedMessage) {
-              continue;
+            // If there are deleted messages, check if there are newer messages after deletion
+            if (deletedMessages.length > 0) {
+              // Get the latest deletion timestamp
+              const latestDeletionTime = Math.max(...deletedMessages.map(msg => {
+                const data = msg.data();
+                return data.timestamp?.toDate()?.getTime() || 0;
+              }));
+
+              // Check if there are any messages newer than the latest deletion
+              const hasNewerMessages = conversationMessages.some(msg => {
+                const data = msg.data();
+                const messageTime = data.timestamp?.toDate()?.getTime() || 0;
+                return messageTime > latestDeletionTime && data.text !== 'CONVERSATION_DELETED';
+              });
+
+              // Skip this conversation only if there are no newer messages after deletion
+              if (!hasNewerMessages) {
+                continue;
+              }
             }
             
-            // Sort by timestamp to get the latest message
-            conversationMessages.sort((a, b) => {
+            // Filter out CONVERSATION_DELETED messages and sort by timestamp
+            const validMessages = conversationMessages.filter(msg => {
+              const data = msg.data();
+              return data.text !== 'CONVERSATION_DELETED' || !data.isSystemMessage;
+            });
+            
+            validMessages.sort((a, b) => {
               const timeA = a.data().timestamp?.toDate()?.getTime() || 0;
               const timeB = b.data().timestamp?.toDate()?.getTime() || 0;
               return timeB - timeA;
             });
             
-            const latestMessage = conversationMessages[0];
+            const latestMessage = validMessages[0];
             const lastMessageTime = latestMessage?.data().timestamp?.toDate() || new Date();
             const lastMessageData = latestMessage?.data();
             const lastMessageText = lastMessageData?.text || '';
             const lastMessageSenderId = lastMessageData?.senderId;
             
-            // Count unread messages (messages sent TO current user)
-            const unreadCount = conversationMessages.filter(msg => {
+            // Count unread messages (messages sent TO current user) from valid messages only
+            const unreadCount = validMessages.filter(msg => {
               const data = msg.data();
               return data.senderId === userId && data.receiverId === currentUserId;
             }).length;
