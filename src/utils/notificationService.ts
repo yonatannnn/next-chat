@@ -7,6 +7,21 @@ export interface NotificationData {
   data?: any;
 }
 
+export interface NotificationAction {
+  action: string;
+  title: string;
+  icon?: string;
+}
+
+export interface EnhancedNotificationOptions extends NotificationOptions {
+  actions?: NotificationAction[];
+  timestamp?: number;
+  vibrate?: number[];
+  renotify?: boolean;
+  dir?: 'ltr' | 'rtl' | 'auto';
+  lang?: string;
+}
+
 export interface PushSubscriptionData {
   endpoint: string;
   keys: {
@@ -252,7 +267,7 @@ class NotificationService {
       }
       
       // For desktop or when push is not available, use direct notifications
-      const notificationOptions: NotificationOptions = {
+      const notificationOptions: EnhancedNotificationOptions = {
         body: data.body,
         icon: this.getAbsoluteUrl(data.icon || '/icons/icon-192x192.png'),
         badge: this.getAbsoluteUrl(data.badge || '/icons/icon-72x72.png'),
@@ -260,12 +275,20 @@ class NotificationService {
         data: data.data,
         requireInteraction: false,
         silent: false,
+        // Enhanced notification styling
+        actions: this.getNotificationActions(data),
+        timestamp: Date.now(),
+        vibrate: [200, 100, 200, 100, 200], // Custom vibration pattern
+        renotify: true, // Allow renotifying with same tag
+        dir: 'ltr', // Text direction
+        lang: 'en', // Language
       };
 
       console.log('Using direct notification API');
       const notification = new Notification(data.title, notificationOptions);
 
-      notification.onclick = () => {
+      notification.onclick = (event) => {
+        event.preventDefault();
         window.focus();
         notification.close();
         
@@ -274,6 +297,9 @@ class NotificationService {
           window.location.href = '/chat';
         }
       };
+
+      // Note: Action clicks are handled by the service worker
+      // The service worker will handle the action clicks for push notifications
 
       // Shorter timeout for mobile
       setTimeout(() => notification.close(), isMobile ? 5000 : 10000);
@@ -295,7 +321,7 @@ class NotificationService {
       : messageText;
 
     return this.showNotification({
-      title: `New message from ${senderName}`,
+      title: `${senderName}`,
       body: truncatedMessage,
       tag: `chat-${senderId}`, // This will replace previous notifications from the same sender
       data: { senderId, type: 'chat' },
@@ -334,6 +360,43 @@ class NotificationService {
   private getAbsoluteUrl(path: string): string {
     if (path.startsWith('http')) return path;
     return `${window.location.origin}${path.startsWith('/') ? path : '/' + path}`;
+  }
+
+  /**
+   * Get notification actions based on notification type
+   */
+  private getNotificationActions(data: NotificationData): NotificationAction[] {
+    const actions: NotificationAction[] = [];
+    
+    if (data.data?.type === 'chat') {
+      actions.push(
+        {
+          action: 'reply',
+          title: 'Reply',
+          icon: this.getAbsoluteUrl('/icons/reply-icon.png')
+        },
+        {
+          action: 'view',
+          title: 'View Chat',
+          icon: this.getAbsoluteUrl('/icons/chat-icon.png')
+        }
+      );
+    } else {
+      actions.push(
+        {
+          action: 'view',
+          title: 'View',
+          icon: this.getAbsoluteUrl('/icons/view-icon.png')
+        },
+        {
+          action: 'dismiss',
+          title: 'Dismiss',
+          icon: this.getAbsoluteUrl('/icons/dismiss-icon.png')
+        }
+      );
+    }
+    
+    return actions;
   }
 
   private isMobile(): boolean {

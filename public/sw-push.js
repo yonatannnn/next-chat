@@ -17,15 +17,27 @@ self.addEventListener('push', (event) => {
       data: data.data || {},
       requireInteraction: true,
       silent: false,
-      vibrate: [200, 100, 200],
+      vibrate: [200, 100, 200, 100, 200], // Enhanced vibration pattern
+      timestamp: Date.now(),
+      renotify: true,
+      dir: 'ltr',
+      lang: 'en',
+      image: data.image, // Support for large images
       actions: [
         {
-          action: 'open',
-          title: 'Open Chat'
+          action: 'reply',
+          title: 'Reply',
+          icon: '/icons/reply-icon.svg'
         },
         {
-          action: 'close',
-          title: 'Dismiss'
+          action: 'view',
+          title: 'View Chat',
+          icon: '/icons/chat-icon.svg'
+        },
+        {
+          action: 'dismiss',
+          title: 'Dismiss',
+          icon: '/icons/dismiss-icon.svg'
         }
       ]
     };
@@ -42,11 +54,22 @@ self.addEventListener('notificationclick', (event) => {
   
   event.notification.close();
   
-  if (event.action === 'open' || !event.action) {
-    // Open the chat page
-    event.waitUntil(
-      clients.openWindow('/chat')
-    );
+  switch (event.action) {
+    case 'reply':
+    case 'view':
+      // Open the chat page
+      event.waitUntil(
+        clients.openWindow('/chat')
+      );
+      break;
+    case 'dismiss':
+      // Just close the notification (already closed above)
+      break;
+    default:
+      // Default action - open chat
+      event.waitUntil(
+        clients.openWindow('/chat')
+      );
   }
 });
 

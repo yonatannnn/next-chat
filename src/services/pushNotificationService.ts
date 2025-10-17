@@ -135,7 +135,7 @@ class PushNotificationService {
       : messageText;
 
     const payload: NotificationPayload = {
-      title: `New message from ${senderName}`,
+      title: `${senderName}`,
       body: truncatedMessage,
       icon: '/icons/icon-192x192.png',
       badge: '/icons/icon-72x72.png',
