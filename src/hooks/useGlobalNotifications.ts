@@ -50,6 +50,12 @@ export const useGlobalNotifications = () => {
         // Test notification capability
         if (!notificationService.canNotify()) {
           console.warn('Notifications not ready despite permission');
+        } else {
+          // Register push subscription with server for background notifications
+          console.log('Registering push subscription with server...');
+          if (userData?.id) {
+            await notificationService.registerPushSubscription(userData.id);
+          }
         }
       }
     } catch (error) {

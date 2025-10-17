@@ -15,6 +15,8 @@ export interface PushSubscriptionData {
   };
 }
 
+import { pushNotificationService } from '@/services/pushNotificationService';
+
 class NotificationService {
   private permission: NotificationPermission = 'default';
   private isSupported: boolean = false;
@@ -137,6 +139,39 @@ class NotificationService {
         auth: auth ? this.arrayBufferToBase64(auth) : ''
       }
     };
+  }
+
+  /**
+   * Register push subscription with server
+   */
+  async registerPushSubscription(userId: string): Promise<boolean> {
+    try {
+      const subscriptionData = await this.getPushSubscription();
+      if (!subscriptionData) {
+        console.log('No push subscription available to register');
+        return false;
+      }
+
+      const success = await pushNotificationService.storePushSubscription({
+        userId,
+        endpoint: subscriptionData.endpoint,
+        p256dh: subscriptionData.keys.p256dh,
+        auth: subscriptionData.keys.auth,
+        userAgent: navigator.userAgent,
+        platform: navigator.platform
+      });
+
+      if (success) {
+        console.log('Push subscription registered with server for user:', userId);
+      } else {
+        console.error('Failed to register push subscription with server');
+      }
+
+      return success;
+    } catch (error) {
+      console.error('Error registering push subscription:', error);
+      return false;
+    }
   }
 
   /**

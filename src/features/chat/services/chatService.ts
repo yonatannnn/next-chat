@@ -15,6 +15,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Message } from '../store/chatStore';
+import { pushNotificationService } from '@/services/pushNotificationService';
 
 export const chatService = {
   async sendMessage(senderId: string, receiverId: string, text: string, fileUrl?: string, fileUrls?: string[], replyTo?: any, voiceUrl?: string, voiceDuration?: number, messageType?: 'system') {
@@ -41,6 +42,28 @@ export const chatService = {
       };
       
       await addDoc(collection(db, 'messages'), messageData);
+      
+      // Send push notification to receiver (only for user messages, not system messages)
+      if (messageType !== 'system') {
+        try {
+          // Get sender name for notification
+          const senderName = 'Someone'; // You might want to get this from user data
+          
+          // Send push notification in background
+          pushNotificationService.sendChatNotification(
+            receiverId,
+            senderName,
+            text,
+            senderId
+          ).catch(error => {
+            console.error('Failed to send push notification:', error);
+            // Don't throw error here as message was already sent successfully
+          });
+        } catch (pushError) {
+          console.error('Error sending push notification:', pushError);
+          // Don't throw error here as message was already sent successfully
+        }
+      }
     } catch (error: unknown) {
       // Handle Firebase quota errors gracefully
       if (error instanceof Error && error.message.includes('resource-exhausted')) {
