@@ -1,12 +1,18 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Bell, BellOff, Smartphone, Monitor } from 'lucide-react';
 import { notificationService } from '@/utils/notificationService';
 
 export const MobileNotificationTest = () => {
   const [permission, setPermission] = useState<NotificationPermission>('default');
   const [isTesting, setIsTesting] = useState(false);
+
+  // Initialize permission on mount
+  useEffect(() => {
+    const currentPermission = notificationService.getPermission();
+    setPermission(currentPermission);
+  }, []);
 
   const checkPermission = () => {
     const currentPermission = notificationService.getPermission();
@@ -45,7 +51,8 @@ export const MobileNotificationTest = () => {
     }
   };
 
-  const detectEnvironment = () => {
+  // Memoize environment detection to prevent re-renders
+  const env = useMemo(() => {
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
     const isAndroid = /Android/.test(navigator.userAgent);
@@ -60,10 +67,7 @@ export const MobileNotificationTest = () => {
       hasServiceWorker,
       userAgent: navigator.userAgent
     };
-  };
-
-  const env = detectEnvironment();
-  const currentPermission = checkPermission();
+  }, []); // Empty dependency array since these values don't change
 
   return (
     <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-lg max-w-sm">
@@ -77,15 +81,15 @@ export const MobileNotificationTest = () => {
         <div className="flex items-center justify-between">
           <span className="text-sm text-gray-600">Permission:</span>
           <div className="flex items-center space-x-1">
-            {currentPermission === 'granted' ? (
+            {permission === 'granted' ? (
               <Bell className="w-4 h-4 text-green-600" />
             ) : (
               <BellOff className="w-4 h-4 text-red-600" />
             )}
             <span className={`text-sm font-medium ${
-              currentPermission === 'granted' ? 'text-green-600' : 'text-red-600'
+              permission === 'granted' ? 'text-green-600' : 'text-red-600'
             }`}>
-              {currentPermission}
+              {permission}
             </span>
           </div>
         </div>
@@ -108,7 +112,7 @@ export const MobileNotificationTest = () => {
 
         {/* Action Buttons */}
         <div className="space-y-2">
-          {currentPermission !== 'granted' && (
+          {permission !== 'granted' && (
             <button
               onClick={requestPermission}
               disabled={isTesting}
@@ -118,7 +122,7 @@ export const MobileNotificationTest = () => {
             </button>
           )}
 
-          {currentPermission === 'granted' && (
+          {permission === 'granted' && (
             <button
               onClick={testNotification}
               className="w-full bg-green-600 text-white text-sm font-medium px-3 py-2 rounded-md hover:bg-green-700 transition-colors"

@@ -1,115 +1,101 @@
-// Service Worker for Next Chat
-const CACHE_NAME = 'next-chat-v1';
-const urlsToCache = [
-  '/',
-  '/chat',
-  '/profile',
-  '/login',
-  '/register',
-  '/icons/icon-192x192.png',
-  '/icons/icon-512x512.png'
-];
+/**
+ * Copyright 2018 Google Inc. All Rights Reserved.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
-// Install event
-self.addEventListener('install', (event) => {
-  console.log('Service Worker installing...');
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => {
-        console.log('Service Worker caching files');
-        return cache.addAll(urlsToCache);
-      })
-      .then(() => {
-        console.log('Service Worker installed');
-        return self.skipWaiting();
-      })
-  );
-});
+// If the loader is already loaded, just stop.
+if (!self.define) {
+  let registry = {};
 
-// Activate event
-self.addEventListener('activate', (event) => {
-  console.log('Service Worker activating...');
-  event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            console.log('Service Worker deleting old cache:', cacheName);
-            return caches.delete(cacheName);
+  // Used for `eval` and `importScripts` where we can't get script URL by other means.
+  // In both cases, it's safe to use a global var because those functions are synchronous.
+  let nextDefineUri;
+
+  const singleRequire = (uri, parentUri) => {
+    uri = new URL(uri + ".js", parentUri).href;
+    return registry[uri] || (
+      
+        new Promise(resolve => {
+          if ("document" in self) {
+            const script = document.createElement("script");
+            script.src = uri;
+            script.onload = resolve;
+            document.head.appendChild(script);
+          } else {
+            nextDefineUri = uri;
+            importScripts(uri);
+            resolve();
           }
         })
-      );
-    }).then(() => {
-      console.log('Service Worker activated');
-      return self.clients.claim();
-    })
-  );
-});
-
-// Fetch event
-self.addEventListener('fetch', (event) => {
-  event.respondWith(
-    caches.match(event.request)
-      .then((response) => {
-        // Return cached version or fetch from network
-        return response || fetch(event.request);
-      })
-  );
-});
-
-// Handle messages from the main thread
-self.addEventListener('message', (event) => {
-  console.log('Service Worker received message:', event.data);
-  
-  if (event.data && event.data.action === 'showNotification') {
-    const { title, options } = event.data;
-    event.waitUntil(
-      self.registration.showNotification(title, options)
-    );
-  }
-  
-  if (event.data && event.data.action === 'closeNotificationsByTag') {
-    const { tag } = event.data;
-    event.waitUntil(
-      self.registration.getNotifications({ tag }).then(notifications => {
-        notifications.forEach(notification => notification.close());
-      })
-    );
-  }
-});
-
-// Handle notification click
-self.addEventListener('notificationclick', (event) => {
-  console.log('Notification clicked:', event.notification);
-  
-  event.notification.close();
-  
-  // Handle different notification actions
-  if (event.action === 'open') {
-    event.waitUntil(
-      clients.openWindow('/chat')
-    );
-  } else if (event.action === 'close') {
-    // Just close the notification (already done above)
-    return;
-  } else {
-    // Default action - open the app
-    event.waitUntil(
-      clients.matchAll({ type: 'window' }).then((clientList) => {
-        // If app is already open, focus it
-        for (const client of clientList) {
-          if (client.url.includes('/chat') && 'focus' in client) {
-            return client.focus();
-          }
+      
+      .then(() => {
+        let promise = registry[uri];
+        if (!promise) {
+          throw new Error(`Module ${uri} didn’t register its module`);
         }
-        // Otherwise open new window
-        return clients.openWindow('/chat');
+        return promise;
       })
     );
-  }
-});
+  };
 
-// Handle notification close
-self.addEventListener('notificationclose', (event) => {
-  console.log('Notification closed:', event.notification);
-});
+  self.define = (depsNames, factory) => {
+    const uri = nextDefineUri || ("document" in self ? document.currentScript.src : "") || location.href;
+    if (registry[uri]) {
+      // Module is already loading or loaded.
+      return;
+    }
+    let exports = {};
+    const require = depUri => singleRequire(depUri, uri);
+    const specialDeps = {
+      module: { uri },
+      exports,
+      require
+    };
+    registry[uri] = Promise.all(depsNames.map(
+      depName => specialDeps[depName] || require(depName)
+    )).then(deps => {
+      factory(...deps);
+      return exports;
+    });
+  };
+}
+define(['./workbox-e43f5367'], (function (workbox) { 'use strict';
+
+  importScripts();
+  self.skipWaiting();
+  workbox.clientsClaim();
+  workbox.registerRoute("/", new workbox.NetworkFirst({
+    "cacheName": "start-url",
+    plugins: [{
+      cacheWillUpdate: async ({
+        request,
+        response,
+        event,
+        state
+      }) => {
+        if (response && response.type === 'opaqueredirect') {
+          return new Response(response.body, {
+            status: 200,
+            statusText: 'OK',
+            headers: response.headers
+          });
+        }
+        return response;
+      }
+    }]
+  }), 'GET');
+  workbox.registerRoute(/.*/i, new workbox.NetworkOnly({
+    "cacheName": "dev",
+    plugins: []
+  }), 'GET');
+
+}));
+//# sourceMappingURL=sw.js.map
