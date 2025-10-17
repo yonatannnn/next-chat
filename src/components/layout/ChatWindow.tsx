@@ -297,6 +297,95 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     }
   }, [selectedUserId, selectedGroupId, previousChatId, conversations, groupConversations, markAsSeen, markGroupAsSeen]);
 
+  // PWA visibility detection for message seen status
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      // Only process if we're in PWA mode and page becomes visible
+      const isPWA = window.matchMedia('(display-mode: standalone)').matches || 
+                   (window.navigator as any).standalone === true;
+      
+      if (isPWA && document.visibilityState === 'visible' && 
+          (selectedUserId || selectedGroupId) && userData?.id && messages.length > 0) {
+        console.log('PWA became visible, checking for unseen messages...');
+        
+        // Small delay to ensure user is actually viewing the chat
+        setTimeout(() => {
+          if (selectedUserId) {
+            const unseenMessages = messages.filter(msg => 
+              msg.senderId === selectedUserId && 
+              msg.receiverId === userData.id && 
+              !msg.seen
+            );
+
+            if (unseenMessages.length > 0) {
+              console.log(`PWA visibility: Marking ${unseenMessages.length} messages as seen for user ${selectedUserId}`);
+              
+              unseenMessages.forEach(async (message) => {
+                try {
+                  await chatService.markMessageAsSeen(message.id);
+                  markMessageAsSeen(message.id);
+                  updateConversation(selectedUserId, { lastMessageSeen: true });
+                } catch (error) {
+                  console.error('Error marking message as seen:', error);
+                }
+              });
+            }
+          } else if (selectedGroupId) {
+            const unseenMessages = messages.filter(msg => 
+              msg.groupId === selectedGroupId && 
+              msg.senderId !== userData.id && 
+              !msg.seen
+            );
+
+            if (unseenMessages.length > 0) {
+              console.log(`PWA visibility: Marking ${unseenMessages.length} group messages as seen for group ${selectedGroupId}`);
+              
+              unseenMessages.forEach(async (message) => {
+                try {
+                  await groupChatService.markGroupMessageAsSeen(message.id);
+                  markMessageAsSeen(message.id);
+                  updateGroupConversation(selectedGroupId, { lastMessageSeen: true });
+                } catch (error) {
+                  console.error('Error marking group message as seen:', error);
+                }
+              });
+            }
+          }
+        }, 500); // Shorter delay for PWA visibility
+      }
+    };
+
+    // Listen for visibility changes (important for PWA)
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    // Also listen for focus events (additional PWA detection)
+    const handleFocus = () => {
+      if (document.visibilityState === 'visible') {
+        handleVisibilityChange();
+      }
+    };
+    window.addEventListener('focus', handleFocus);
+
+    // Additional PWA-specific detection: listen for app state changes
+    const handleAppStateChange = () => {
+      // This helps detect when the PWA app becomes active again
+      if (document.visibilityState === 'visible' && document.hasFocus()) {
+        handleVisibilityChange();
+      }
+    };
+    
+    // Listen for when the app becomes active (useful for PWA)
+    window.addEventListener('pageshow', handleAppStateChange);
+    window.addEventListener('resume', handleAppStateChange); // Some browsers support this
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('pageshow', handleAppStateChange);
+      window.removeEventListener('resume', handleAppStateChange);
+    };
+  }, [selectedUserId, selectedGroupId, messages, userData?.id, markMessageAsSeen, updateConversation, updateGroupConversation]);
+
   // Simplified message seen logic - mark as seen when chat is selected and messages are loaded
   useEffect(() => {
     if ((selectedUserId || selectedGroupId) && userData?.id && messages.length > 0) {
