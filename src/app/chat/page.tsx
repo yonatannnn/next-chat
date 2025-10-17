@@ -14,9 +14,6 @@ import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { DropdownMenu } from '@/components/ui/DropdownMenu';
 import { Avatar } from '@/components/ui/Avatar';
 import { ChatInfoModal } from '@/components/ui/ChatInfoModal';
-import { MobileNotificationTest } from '@/components/ui/MobileNotificationTest';
-import { MobilePushNotificationTest } from '@/components/ui/MobilePushNotificationTest';
-import { NotificationTestButton } from '@/components/ui/NotificationTestButton';
 import { Menu, X, Info, Users, Trash2, Search, EyeOff, Lock, AlertTriangle } from 'lucide-react';
 
 // Force dynamic rendering
@@ -143,16 +140,6 @@ export default function ChatPage() {
 
   return (
     <div className="h-screen flex bg-gray-50 relative overflow-hidden">
-      {/* Mobile Notification Test - Remove in production */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="fixed top-4 right-4 z-50 max-w-sm space-y-2">
-          <MobileNotificationTest />
-          <MobilePushNotificationTest />
-        </div>
-      )}
-      
-      {/* Notification Test Button - Always visible for testing */}
-      <NotificationTestButton />
       {/* Mobile Header */}
       <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
         {selectedUserId || selectedGroupId ? (
