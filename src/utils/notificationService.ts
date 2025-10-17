@@ -97,8 +97,6 @@ class NotificationService {
       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
       const isAndroid = /Android/.test(navigator.userAgent);
       
-
-      // Use regular notification API directly
       console.log('Creating notification with title:', data.title);
       
       const notificationOptions: NotificationOptions = {
@@ -130,6 +128,34 @@ class NotificationService {
         ];
       }
 
+      // Try to use service worker first (for PWA and mobile apps)
+      if ('serviceWorker' in navigator) {
+        try {
+          const registration = await navigator.serviceWorker.ready;
+          if (registration.active) {
+            console.log('Using service worker for notification');
+            
+            // Send message to service worker
+            registration.active.postMessage({
+              action: 'showNotification',
+              title: data.title,
+              options: notificationOptions
+            });
+            
+            // Return a mock notification object for compatibility
+            return {
+              title: data.title,
+              body: data.body,
+              close: () => console.log('Notification closed via service worker')
+            } as any;
+          }
+        } catch (error) {
+          console.warn('Service worker not ready, falling back to direct notification:', error);
+        }
+      }
+
+      // Fallback to direct notification API (for desktop web)
+      console.log('Using direct notification API');
       const notification = new Notification(data.title, notificationOptions);
       console.log('Notification created successfully:', notification);
 
