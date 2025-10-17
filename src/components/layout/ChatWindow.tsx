@@ -49,21 +49,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   const [processingRecommendation, setProcessingRecommendation] = useState<string | null>(null);
   const [showHardHideConfirm, setShowHardHideConfirm] = useState(false);
   const [isAtBottom, setIsAtBottom] = useState(true);
-  const [isMobile, setIsMobile] = useState(false);
-
-  // Detect mobile device
-  useEffect(() => {
-    const checkMobile = () => {
-      const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-      const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-      setIsMobile(isMobileDevice || isTouchDevice);
-    };
-    
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
 
   // Handle mobile search state
   useEffect(() => {
@@ -73,52 +58,30 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     }
   }, [isMobileSearchOpen, setIsMobileSearchOpen]);
 
-  // Enhanced scroll detection with mobile support
+  // Simple scroll detection - only track if user is at bottom
   useEffect(() => {
     const messagesContainer = document.querySelector('.messages-container');
     if (!messagesContainer) return;
-
-    let scrollTimeout: NodeJS.Timeout;
-    let isUserScrolling = false;
-    let lastScrollTop = 0;
 
     const handleScroll = () => {
       const currentScrollTop = messagesContainer.scrollTop;
       const scrollHeight = messagesContainer.scrollHeight;
       const clientHeight = messagesContainer.clientHeight;
       
-      // Check if user is at the bottom (more tolerance for mobile)
-      const tolerance = isMobile ? 20 : 10;
-      const atBottom = currentScrollTop + clientHeight >= scrollHeight - tolerance;
-      
-      // Only update if scroll position actually changed (prevents mobile scroll issues)
-      if (Math.abs(currentScrollTop - lastScrollTop) > 1) {
-        setIsAtBottom(atBottom);
-        lastScrollTop = currentScrollTop;
-      }
-      
-      // Mark that user is actively scrolling
-      isUserScrolling = true;
-      clearTimeout(scrollTimeout);
-      
-      // Reset user scrolling flag after scroll ends (longer timeout for mobile)
-      const timeoutDuration = isMobile ? 300 : 150;
-      scrollTimeout = setTimeout(() => {
-        isUserScrolling = false;
-      }, timeoutDuration);
+      // Check if user is at the bottom (within 5px for more precision)
+      const atBottom = currentScrollTop + clientHeight >= scrollHeight - 5;
+      setIsAtBottom(atBottom);
     };
 
     // Initial check
     handleScroll();
 
-    // Use passive listeners for better mobile performance
     messagesContainer.addEventListener('scroll', handleScroll, { passive: true });
     
     return () => {
       messagesContainer.removeEventListener('scroll', handleScroll);
-      clearTimeout(scrollTimeout);
     };
-  }, [isMobile]);
+  }, []);
 
   // Search functionality
   const handleSearch = (query: string) => {
@@ -237,7 +200,11 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     if (messagesEndRef.current) {
       // On initial load or when switching chats, scroll instantly to bottom (unless search is active)
       if ((isInitialLoad || messages.length === 0) && !isSearchOpen) {
-        messagesEndRef.current.scrollIntoView({ behavior: 'auto' });
+        // Use direct scrollTop manipulation for better mobile compatibility
+        const messagesContainer = document.querySelector('.messages-container');
+        if (messagesContainer) {
+          messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
         setIsInitialLoad(false);
         
         // After 1 second, enable smooth scrolling for future messages
@@ -247,20 +214,19 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       } 
       // When new messages are added, only auto-scroll if user is at the bottom
       else if (messages.length > previousMessageCount && !isSearchOpen) {
-        // Check if user is actively scrolling to avoid interrupting
-        const messagesContainer = document.querySelector('.messages-container');
-        if (messagesContainer) {
-          const currentScrollTop = messagesContainer.scrollTop;
-          const scrollHeight = messagesContainer.scrollHeight;
-          const clientHeight = messagesContainer.clientHeight;
-          const tolerance = isMobile ? 20 : 10;
-          const atBottom = currentScrollTop + clientHeight >= scrollHeight - tolerance;
-          
-          // Only auto-scroll if user is at bottom AND not actively scrolling
-          if (atBottom && isAtBottom) {
-            // Use different scroll behavior for mobile vs desktop
-            const scrollBehavior = isMobile ? 'auto' : (smoothScrollingEnabled ? 'smooth' : 'auto');
-            messagesEndRef.current.scrollIntoView({ behavior: scrollBehavior });
+        // Only auto-scroll if user is at the bottom
+        if (isAtBottom) {
+          // Use direct scrollTop manipulation for better mobile compatibility
+          const messagesContainer = document.querySelector('.messages-container');
+          if (messagesContainer) {
+            if (smoothScrollingEnabled) {
+              messagesContainer.scrollTo({
+                top: messagesContainer.scrollHeight,
+                behavior: 'smooth'
+              });
+            } else {
+              messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }
           }
         }
       }
@@ -735,7 +701,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       )}
 
       {/* Messages - Scrollable */}
-      <div className={`messages-container flex-1 overflow-y-auto min-h-0 p-3 md:p-4 space-y-3 md:space-y-4 pt-4 md:pt-4 ${isMobile ? 'overscroll-behavior-contain' : ''}`}>
+      <div className="messages-container flex-1 overflow-y-auto min-h-0 p-3 md:p-4 space-y-3 md:space-y-4 pt-4 md:pt-4">
         {/* Messages */}
         {messages.map((message) => {
           const isOwn = message.senderId === userData?.id;
