@@ -98,13 +98,17 @@ class NotificationService {
       const isAndroid = /Android/.test(navigator.userAgent);
       
 
-      // Check if service worker is available for PWA notifications
+      // Try to use our custom notification service worker first
       if ('serviceWorker' in navigator && 'Notification' in window) {
         try {
-          const registration = await navigator.serviceWorker.ready;
+          // Register our custom notification service worker
+          const notificationRegistration = await navigator.serviceWorker.register('/notifications-sw.js', {
+            scope: '/'
+          });
           
-          if (registration.active) {
-            // Use service worker for PWA notifications
+          if (notificationRegistration.active) {
+            console.log('Using custom notification service worker');
+            
             const notificationOptions = {
               body: data.body,
               icon: data.icon || '/icons/icon-192x192.png',
@@ -113,7 +117,7 @@ class NotificationService {
               data: data.data,
               requireInteraction: true,
               silent: false,
-              vibrate: isMobile ? [200, 100, 200] : undefined, // Mobile vibration
+              vibrate: isMobile ? [200, 100, 200] : undefined,
               actions: isMobile ? [
                 {
                   action: 'open',
@@ -126,19 +130,18 @@ class NotificationService {
               ] : undefined
             };
 
-            // Send message to service worker to show notification
-            registration.active.postMessage({
+            // Send message to our custom service worker
+            notificationRegistration.active.postMessage({
               action: 'showNotification',
               title: data.title,
               options: notificationOptions
             });
 
-            console.log('Notification sent to service worker:', data.title);
+            console.log('Notification sent to custom service worker:', data.title);
             return null; // Service worker handles the notification
           }
         } catch (swError) {
-          console.warn('Service worker not available, falling back to regular notifications:', swError);
-          // Fall through to regular notification API
+          console.warn('Custom notification service worker not available, falling back to regular notifications:', swError);
         }
       }
 
