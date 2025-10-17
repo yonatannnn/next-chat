@@ -15,7 +15,6 @@ import { DropdownMenu } from '@/components/ui/DropdownMenu';
 import { Avatar } from '@/components/ui/Avatar';
 import { ChatInfoModal } from '@/components/ui/ChatInfoModal';
 import { MobileNotificationTest } from '@/components/ui/MobileNotificationTest';
-import { NotificationDebug } from '@/components/ui/NotificationDebug';
 import { Menu, X, Info, Users, Trash2, Search, EyeOff, Lock, AlertTriangle } from 'lucide-react';
 
 // Force dynamic rendering
@@ -144,9 +143,8 @@ export default function ChatPage() {
     <div className="h-screen flex bg-gray-50 relative">
       {/* Mobile Notification Test - Remove in production */}
       {process.env.NODE_ENV === 'development' && (
-        <div className="fixed top-4 right-4 z-50 max-w-sm space-y-4">
+        <div className="fixed top-4 right-4 z-50 max-w-sm">
           <MobileNotificationTest />
-          <NotificationDebug />
         </div>
       )}
       {/* Mobile Header */}
