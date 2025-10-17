@@ -25,8 +25,10 @@ export const metadata: Metadata = {
     "mobile-web-app-capable": "yes",
     "apple-mobile-web-app-capable": "yes",
     "apple-mobile-web-app-status-bar-style": "default",
+    "apple-mobile-web-app-title": "Next Chat",
     "msapplication-TileColor": "#3b82f6",
     "msapplication-config": "/browserconfig.xml",
+    "format-detection": "telephone=no",
   },
 };
 

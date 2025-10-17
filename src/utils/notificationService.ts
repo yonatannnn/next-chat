@@ -32,7 +32,30 @@ class NotificationService {
     }
 
     if (this.permission === 'default') {
-      this.permission = await Notification.requestPermission();
+      try {
+        // For mobile browsers, we need to ensure the user interaction is recent
+        // and the page is in focus
+        if (document.visibilityState === 'hidden') {
+          console.warn('Cannot request notification permission: page is not visible');
+          return 'denied';
+        }
+
+        this.permission = await Notification.requestPermission();
+        console.log('Notification permission result:', this.permission);
+        
+        // For mobile, also check if service worker is ready
+        if (this.permission === 'granted' && 'serviceWorker' in navigator) {
+          try {
+            const registration = await navigator.serviceWorker.ready;
+            console.log('Service worker ready for notifications:', !!registration);
+          } catch (error) {
+            console.error('Service worker not ready:', error);
+          }
+        }
+      } catch (error) {
+        console.error('Error requesting notification permission:', error);
+        this.permission = 'denied';
+      }
     }
 
     return this.permission;
@@ -57,38 +80,44 @@ class NotificationService {
     try {
       // Check if service worker is available for PWA notifications
       if ('serviceWorker' in navigator && 'Notification' in window) {
-        const registration = await navigator.serviceWorker.ready;
-        
-        if (registration.active) {
-          // Use service worker for PWA notifications
-          const notificationOptions = {
-            body: data.body,
-            icon: data.icon || '/icons/icon-192x192.png',
-            badge: data.badge || '/icons/icon-72x72.png',
-            tag: data.tag,
-            data: data.data,
-            requireInteraction: true,
-            actions: [
-              {
-                action: 'open',
-                title: 'Open Chat'
-              },
-              {
-                action: 'close',
-                title: 'Dismiss'
-              }
-            ]
-          };
+        try {
+          const registration = await navigator.serviceWorker.ready;
+          
+          if (registration.active) {
+            // Use service worker for PWA notifications
+            const notificationOptions = {
+              body: data.body,
+              icon: data.icon || '/icons/icon-192x192.png',
+              badge: data.badge || '/icons/icon-72x72.png',
+              tag: data.tag,
+              data: data.data,
+              requireInteraction: true,
+              silent: false,
+              vibrate: [200, 100, 200], // Mobile vibration
+              actions: [
+                {
+                  action: 'open',
+                  title: 'Open Chat'
+                },
+                {
+                  action: 'close',
+                  title: 'Dismiss'
+                }
+              ]
+            };
 
-          // Send message to service worker to show notification
-          registration.active.postMessage({
-            action: 'showNotification',
-            title: data.title,
-            options: notificationOptions
-          });
+            // Send message to service worker to show notification
+            registration.active.postMessage({
+              action: 'showNotification',
+              title: data.title,
+              options: notificationOptions
+            });
 
-          console.log('PWA notification sent to service worker');
-          return null; // Service worker handles the notification
+            console.log('PWA notification sent to service worker');
+            return null; // Service worker handles the notification
+          }
+        } catch (swError) {
+          console.warn('Service worker not available, falling back to regular notifications:', swError);
         }
       }
 

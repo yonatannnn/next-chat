@@ -27,6 +27,8 @@ self.addEventListener('push', (event) => {
       tag: data.tag || NOTIFICATION_TAG,
       data: data.data,
       requireInteraction: true,
+      silent: false,
+      vibrate: [200, 100, 200], // Vibration pattern for mobile
       actions: [
         {
           action: 'open',
@@ -41,6 +43,12 @@ self.addEventListener('push', (event) => {
 
     event.waitUntil(
       self.registration.showNotification(data.title, options)
+        .then(() => {
+          console.log('Service Worker: Notification shown successfully');
+        })
+        .catch(error => {
+          console.error('Service Worker: Error showing notification:', error);
+        })
     );
   }
 });
