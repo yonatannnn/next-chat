@@ -14,12 +14,31 @@ export const useGlobalNotifications = () => {
   useEffect(() => {
     if (!hasRequestedPermission.current && userData?.id) {
       hasRequestedPermission.current = true;
+      
+      // Check if we're in a PWA context
+      const isPWA = window.matchMedia('(display-mode: standalone)').matches || 
+                   (window.navigator as any).standalone === true;
+      
+      console.log('🔔 PWA Context:', isPWA);
+      console.log('🔔 Service Worker Support:', 'serviceWorker' in navigator);
+      console.log('🔔 Notification Support:', 'Notification' in window);
+      
       notificationService.requestPermission().then(permission => {
+        console.log('🔔 Permission result:', permission);
         if (permission === 'granted') {
-          console.log('Notification permission granted');
+          console.log('✅ Notification permission granted');
+          
+          // Test notification capability
+          if (notificationService.canNotify()) {
+            console.log('✅ Notifications are ready');
+          } else {
+            console.warn('⚠️ Notifications not ready despite permission');
+          }
         } else {
-          console.log('Notification permission denied');
+          console.log('❌ Notification permission denied or default');
         }
+      }).catch(error => {
+        console.error('❌ Error requesting notification permission:', error);
       });
     }
   }, [userData?.id]);
@@ -66,7 +85,9 @@ export const useGlobalNotifications = () => {
         }
 
         // Skip if we're currently viewing the chat with this sender
+        // This prevents notifications when user is actively in the chat
         if (selectedUserId === latestMessage.senderId) {
+          console.log('🔔 Skipping notification: User is currently viewing this chat');
           lastMessageRef.current = {
             id: latestMessage.id,
             timestamp: latestMessage.timestamp.getTime()
@@ -76,6 +97,7 @@ export const useGlobalNotifications = () => {
 
         // Skip if the tab is focused (user is actively using the app)
         if (notificationService.isTabFocused()) {
+          console.log('🔔 Skipping notification: Tab is focused (user is actively using the app)');
           lastMessageRef.current = {
             id: latestMessage.id,
             timestamp: latestMessage.timestamp.getTime()

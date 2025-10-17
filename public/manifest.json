@@ -85,5 +85,20 @@
         }
       ]
     }
-  ]
+  ],
+  "permissions": [
+    "notifications"
+  ],
+  "notification": {
+    "actions": [
+      {
+        "action": "open",
+        "title": "Open Chat"
+      },
+      {
+        "action": "close",
+        "title": "Dismiss"
+      }
+    ]
+  }
 }

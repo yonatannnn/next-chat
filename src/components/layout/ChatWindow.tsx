@@ -251,52 +251,108 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     }
   }, [selectedUserId, selectedGroupId, conversations, groupConversations, markAsSeen, markGroupAsSeen]);
 
-  // Mark messages as seen when they're viewed by the recipient
+  // Track when user is actually viewing the chat (not just selected)
+  const [isUserViewingChat, setIsUserViewingChat] = useState(false);
+  const [viewingStartTime, setViewingStartTime] = useState<number | null>(null);
+
+  // Mark messages as seen only when user is actively viewing the chat
   useEffect(() => {
-    if ((selectedUserId || selectedGroupId) && userData?.id) {
-      if (selectedUserId) {
-        // Find messages sent TO the current user (incoming messages) that haven't been seen yet
-        const unseenMessages = messages.filter(msg => 
-          msg.senderId === selectedUserId && 
-          msg.receiverId === userData.id && 
-          !msg.seen
-        );
+    if ((selectedUserId || selectedGroupId) && userData?.id && isUserViewingChat) {
+      // Only mark as seen if user has been viewing for at least 2 seconds
+      const viewingDuration = viewingStartTime ? Date.now() - viewingStartTime : 0;
+      
+      if (viewingDuration >= 2000) { // 2 seconds minimum viewing time
+        if (selectedUserId) {
+          // Find messages sent TO the current user (incoming messages) that haven't been seen yet
+          const unseenMessages = messages.filter(msg => 
+            msg.senderId === selectedUserId && 
+            msg.receiverId === userData.id && 
+            !msg.seen
+          );
 
-        // Mark each unseen incoming message as seen
-        unseenMessages.forEach(async (message) => {
-          try {
-            await chatService.markMessageAsSeen(message.id);
-            markMessageAsSeen(message.id);
+          // Only mark as seen if there are actually unseen messages
+          if (unseenMessages.length > 0) {
+            console.log(`Marking ${unseenMessages.length} messages as seen for user ${selectedUserId} (viewing for ${viewingDuration}ms)`);
             
-            // Update the conversation's lastMessageSeen status
-            updateConversation(selectedUserId, { lastMessageSeen: true });
-          } catch (error) {
-            console.error('Error marking message as seen:', error);
+            // Mark each unseen incoming message as seen
+            unseenMessages.forEach(async (message) => {
+              try {
+                await chatService.markMessageAsSeen(message.id);
+                markMessageAsSeen(message.id);
+                
+                // Update the conversation's lastMessageSeen status
+                updateConversation(selectedUserId, { lastMessageSeen: true });
+              } catch (error) {
+                console.error('Error marking message as seen:', error);
+              }
+            });
           }
-        });
-      } else if (selectedGroupId) {
-        // For group messages, mark messages from other users as seen
-        const unseenMessages = messages.filter(msg => 
-          msg.groupId === selectedGroupId && 
-          msg.senderId !== userData.id && 
-          !msg.seen
-        );
+        } else if (selectedGroupId) {
+          // For group messages, mark messages from other users as seen
+          const unseenMessages = messages.filter(msg => 
+            msg.groupId === selectedGroupId && 
+            msg.senderId !== userData.id && 
+            !msg.seen
+          );
 
-        // Mark each unseen group message as seen
-        unseenMessages.forEach(async (message) => {
-          try {
-            await groupChatService.markGroupMessageAsSeen(message.id);
-            markMessageAsSeen(message.id);
+          // Only mark as seen if there are actually unseen messages
+          if (unseenMessages.length > 0) {
+            console.log(`Marking ${unseenMessages.length} group messages as seen for group ${selectedGroupId} (viewing for ${viewingDuration}ms)`);
             
-            // Update the group conversation's lastMessageSeen status
-            updateGroupConversation(selectedGroupId, { lastMessageSeen: true });
-          } catch (error) {
-            console.error('Error marking group message as seen:', error);
+            // Mark each unseen group message as seen
+            unseenMessages.forEach(async (message) => {
+              try {
+                await groupChatService.markGroupMessageAsSeen(message.id);
+                markMessageAsSeen(message.id);
+                
+                // Update the group conversation's lastMessageSeen status
+                updateGroupConversation(selectedGroupId, { lastMessageSeen: true });
+              } catch (error) {
+                console.error('Error marking group message as seen:', error);
+              }
+            });
           }
-        });
+        }
       }
     }
-  }, [selectedUserId, selectedGroupId, messages, userData?.id, markMessageAsSeen, updateConversation, updateGroupConversation]);
+  }, [selectedUserId, selectedGroupId, messages, userData?.id, isUserViewingChat, viewingStartTime, markMessageAsSeen, updateConversation, updateGroupConversation]);
+
+  // Track when user starts viewing the chat
+  useEffect(() => {
+    if (selectedUserId || selectedGroupId) {
+      // User is viewing the chat
+      setIsUserViewingChat(true);
+      setViewingStartTime(Date.now());
+      console.log('User started viewing chat:', selectedUserId || selectedGroupId);
+    } else {
+      // User is not viewing any chat
+      setIsUserViewingChat(false);
+      setViewingStartTime(null);
+    }
+  }, [selectedUserId, selectedGroupId]);
+
+  // Track user interaction with the chat to ensure they're actually viewing it
+  useEffect(() => {
+    if (!isUserViewingChat) return;
+
+    const handleUserInteraction = () => {
+      // Reset the viewing start time when user interacts
+      setViewingStartTime(Date.now());
+      console.log('User interacted with chat - reset viewing timer');
+    };
+
+    // Listen for various user interactions
+    const events = ['click', 'scroll', 'keydown', 'touchstart'];
+    events.forEach(event => {
+      document.addEventListener(event, handleUserInteraction, { passive: true });
+    });
+
+    return () => {
+      events.forEach(event => {
+        document.removeEventListener(event, handleUserInteraction);
+      });
+    };
+  }, [isUserViewingChat]);
 
   const handleSendMessage = async (text: string, fileUrl?: string, fileUrls?: string[], replyTo?: any) => {
     if (selectedUserId) {

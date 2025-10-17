@@ -50,14 +50,53 @@ class NotificationService {
    */
   async showNotification(data: NotificationData): Promise<Notification | null> {
     if (typeof window === 'undefined' || !this.canNotify()) {
+      console.warn('Cannot show notification: not supported or permission denied');
       return null;
     }
 
     try {
+      // Check if service worker is available for PWA notifications
+      if ('serviceWorker' in navigator && 'Notification' in window) {
+        const registration = await navigator.serviceWorker.ready;
+        
+        if (registration.active) {
+          // Use service worker for PWA notifications
+          const notificationOptions = {
+            body: data.body,
+            icon: data.icon || '/icons/icon-192x192.png',
+            badge: data.badge || '/icons/icon-72x72.png',
+            tag: data.tag,
+            data: data.data,
+            requireInteraction: true,
+            actions: [
+              {
+                action: 'open',
+                title: 'Open Chat'
+              },
+              {
+                action: 'close',
+                title: 'Dismiss'
+              }
+            ]
+          };
+
+          // Send message to service worker to show notification
+          registration.active.postMessage({
+            action: 'showNotification',
+            title: data.title,
+            options: notificationOptions
+          });
+
+          console.log('PWA notification sent to service worker');
+          return null; // Service worker handles the notification
+        }
+      }
+
+      // Fallback to regular notification API
       const notification = new Notification(data.title, {
         body: data.body,
-        icon: data.icon || '/favicon.ico',
-        badge: data.badge || '/favicon.ico',
+        icon: data.icon || '/icons/icon-192x192.png',
+        badge: data.badge || '/icons/icon-72x72.png',
         tag: data.tag,
         data: data.data,
         requireInteraction: true,
