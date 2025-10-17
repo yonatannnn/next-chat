@@ -40,7 +40,7 @@ export const LinkifiedText: React.FC<LinkifiedTextProps> = ({
   
   if (links.length === 0) {
     return (
-      <span className={className}>
+      <span className={`${className} break-words overflow-wrap-anywhere`}>
         {searchQuery ? highlightSearchTerm(text, searchQuery) : text}
       </span>
     );
@@ -68,7 +68,7 @@ export const LinkifiedText: React.FC<LinkifiedTextProps> = ({
           href={link.url}
           target="_blank"
           rel="noopener noreferrer"
-          className={`underline break-all font-medium ${
+          className={`underline break-all font-medium overflow-wrap-anywhere ${
             isOwn 
               ? 'text-white hover:text-blue-200' 
               : 'text-blue-600 hover:text-blue-800'
@@ -98,7 +98,7 @@ export const LinkifiedText: React.FC<LinkifiedTextProps> = ({
 
   return (
     <div className={className}>
-      <div className="whitespace-pre-wrap">
+      <div className="whitespace-pre-wrap break-words overflow-wrap-anywhere">
         {renderTextWithLinks()}
       </div>
       

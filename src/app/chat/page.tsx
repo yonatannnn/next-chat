@@ -140,7 +140,7 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="h-screen flex bg-gray-50 relative">
+    <div className="h-screen flex bg-gray-50 relative overflow-hidden">
       {/* Mobile Notification Test - Remove in production */}
       {process.env.NODE_ENV === 'development' && (
         <div className="fixed top-4 right-4 z-50 max-w-sm">
@@ -335,7 +335,7 @@ export default function ChatPage() {
 
       {/* Chat Window - Mobile: Show when chat is selected, hide when sidebar is shown */}
       <div className={`
-        flex-1 flex flex-col pt-16 md:pt-0 h-full md:h-screen
+        flex-1 flex flex-col pt-16 md:pt-0 h-full md:h-screen overflow-hidden
         ${(selectedUserId || selectedGroupId) ? 'block' : 'hidden md:flex'}
       `}>
         <ChatWindow 

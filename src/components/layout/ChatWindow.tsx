@@ -700,7 +700,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   }
 
   return (
-    <div className="flex-1 flex flex-col bg-white h-full">
+    <div className="flex-1 flex flex-col bg-white h-full overflow-hidden">
       {/* Chat Header - Fixed - Hidden on mobile since mobile header shows this info */}
       <div className="hidden md:flex flex-shrink-0 border-b border-gray-200 p-3 md:p-4">
         <div className="flex items-center justify-between w-full">
@@ -781,7 +781,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       )}
 
       {/* Messages - Scrollable */}
-      <div className="messages-container flex-1 overflow-y-auto min-h-0 p-3 md:p-4 space-y-3 md:space-y-4 pt-4 md:pt-4">
+      <div className="messages-container flex-1 overflow-y-auto min-h-0 p-3 md:p-4 space-y-3 md:space-y-4 pt-4 md:pt-4 overflow-x-hidden">
         {/* Messages */}
         {messages.map((message) => {
           const isOwn = message.senderId === userData?.id;

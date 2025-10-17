@@ -211,7 +211,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
             <span className="text-xs text-gray-500 mb-1">{senderName}</span>
           )}
           <div
-            className={`px-3 py-2 md:px-4 md:py-2 rounded-lg relative group message-bubble ${
+            className={`px-3 py-2 md:px-4 md:py-2 rounded-lg relative group message-bubble break-words overflow-wrap-anywhere ${
               isOwn
                 ? 'bg-blue-600 text-white'
                 : 'bg-gray-100 text-gray-900'
@@ -253,7 +253,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                 <div className="text-xs opacity-75 mb-1">
                   Replying to {message.replyTo.senderName}
                 </div>
-                <div className="text-xs truncate">
+                <div className="text-xs break-words overflow-wrap-anywhere">
                   {message.replyTo.text.length > 50 
                     ? `${message.replyTo.text.substring(0, 50)}...` 
                     : message.replyTo.text}
@@ -268,9 +268,9 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                   ? 'bg-purple-500 bg-opacity-20 border-purple-400' 
                   : 'bg-gray-200 border-gray-400'
               }`}>
-                <div className="text-xs opacity-75 mb-1 flex items-center">
-                  <Forward size={12} className="mr-1" />
-                  Forwarded from {message.originalSenderName || 'Unknown'}
+                <div className="text-xs opacity-75 mb-1 flex items-center break-words overflow-wrap-anywhere">
+                  <Forward size={12} className="mr-1 flex-shrink-0" />
+                  <span>Forwarded from {message.originalSenderName || 'Unknown'}</span>
                 </div>
               </div>
             )}
