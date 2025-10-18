@@ -196,6 +196,11 @@ class PushNotificationService {
     messageText: string, 
     senderId: string
   ): Promise<boolean> {
+    console.log('🔔 PUSH DEBUG: sendChatNotification called');
+    console.log('🔔 PUSH DEBUG: receiverId:', receiverId);
+    console.log('🔔 PUSH DEBUG: senderName:', senderName);
+    console.log('🔔 PUSH DEBUG: messageText:', messageText);
+    
     const truncatedMessage = messageText.length > 100 
       ? messageText.substring(0, 100) + '...' 
       : messageText;
@@ -214,6 +219,7 @@ class PushNotificationService {
       }
     };
 
+    console.log('🔔 PUSH DEBUG: Sending push notification to all devices for user:', receiverId);
     return await this.sendPushNotificationToAllDevices(receiverId, payload);
   }
 
@@ -250,8 +256,10 @@ class PushNotificationService {
    */
   async removePushSubscriptionForDevice(userId: string, deviceId: string): Promise<boolean> {
     try {
+      console.log('🔴 PUSH DEBUG: Removing push subscription for device:', deviceId, 'user:', userId);
+      
       if (!supabase) {
-        console.error('Supabase not initialized');
+        console.error('🔴 PUSH DEBUG: Supabase not initialized');
         return false;
       }
 
@@ -262,14 +270,14 @@ class PushNotificationService {
         .eq('device_id', deviceId);
 
       if (error) {
-        console.error('Error removing push subscription for device:', error);
+        console.error('🔴 PUSH DEBUG: Error removing push subscription for device:', error);
         return false;
       }
 
-      console.log('Push subscription removed for device:', deviceId, 'of user:', userId);
+      console.log('🔴 PUSH DEBUG: Push subscription removed for device:', deviceId, 'of user:', userId);
       return true;
     } catch (error) {
-      console.error('Error in removePushSubscriptionForDevice:', error);
+      console.error('🔴 PUSH DEBUG: Error in removePushSubscriptionForDevice:', error);
       return false;
     }
   }

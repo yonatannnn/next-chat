@@ -10,9 +10,19 @@ export const useGlobalNotifications = () => {
   const lastMessageRef = useRef<{ id: string; timestamp: number } | null>(null);
   const hasRequestedPermission = useRef(false);
 
+  // Debug logging
+  console.log('🔔 NOTIFICATION DEBUG: useGlobalNotifications hook running');
+  console.log('🔔 NOTIFICATION DEBUG: userData:', userData?.id);
+  console.log('🔔 NOTIFICATION DEBUG: selectedUserId:', selectedUserId);
+
   // Request notification permission on first load
   useEffect(() => {
-    if (!hasRequestedPermission.current && userData?.id) {
+    if (!userData?.id) {
+      console.log('🔔 NOTIFICATION DEBUG: No userData, skipping permission request');
+      return;
+    }
+    
+    if (!hasRequestedPermission.current) {
       hasRequestedPermission.current = true;
       
       // Check if we're in a PWA context
@@ -40,7 +50,7 @@ export const useGlobalNotifications = () => {
       
       requestNotificationPermission();
     }
-  }, [userData?.id]);
+  }, [userData]);
 
   const requestNotificationPermission = async () => {
     try {
@@ -65,12 +75,20 @@ export const useGlobalNotifications = () => {
 
   // Listen to all messages sent TO the current user
   useEffect(() => {
-    if (!userData?.id) return;
+    if (!userData?.id) {
+      console.log('🔔 NOTIFICATION DEBUG: No userData, skipping message listener');
+      return;
+    }
+
+    console.log('🔔 NOTIFICATION DEBUG: Setting up message listener for user:', userData.id);
 
     // Create a service to listen to all messages where current user is the receiver
     const unsubscribe = chatService.subscribeToAllIncomingMessages(
       userData.id,
       (allMessages) => {
+        console.log('🔔 NOTIFICATION DEBUG: Received messages:', allMessages.length);
+        console.log('🔔 NOTIFICATION DEBUG: Current userData:', userData?.id);
+        
         if (!allMessages.length) return;
 
         // Find the latest message by timestamp
@@ -132,19 +150,22 @@ export const useGlobalNotifications = () => {
         // Show notification for new message
         const senderName = conversations.find(conv => conv.userId === latestMessage.senderId)?.username || 'Someone';
         
-        console.log('🔔 New message notification:', {
+        console.log('🔔 NOTIFICATION DEBUG: About to show notification');
+        console.log('🔔 NOTIFICATION DEBUG: userData exists:', !!userData);
+        console.log('🔔 NOTIFICATION DEBUG: userData.id:', userData?.id);
+        console.log('🔔 NOTIFICATION DEBUG: New message notification:', {
           sender: senderName,
           text: latestMessage.text,
           senderId: latestMessage.senderId
         });
         
-        console.log('Calling notificationService.showChatNotification...');
+        console.log('🔔 NOTIFICATION DEBUG: Calling notificationService.showChatNotification...');
         notificationService.showChatNotification(
           senderName,
           latestMessage.text,
           latestMessage.senderId
         ).then(notification => {
-          console.log('Notification service returned:', notification);
+          console.log('🔔 NOTIFICATION DEBUG: Notification service returned:', notification);
           if (notification) {
             // Handle notification click
             notification.onclick = () => {
@@ -154,7 +175,7 @@ export const useGlobalNotifications = () => {
             };
           }
         }).catch(error => {
-          console.error('Error showing notification:', error);
+          console.error('🔔 NOTIFICATION DEBUG: Error showing notification:', error);
         });
 
         lastMessageRef.current = {
@@ -165,9 +186,33 @@ export const useGlobalNotifications = () => {
     );
 
     return () => {
+      console.log('🔔 NOTIFICATION DEBUG: Cleaning up message listener for user:', userData?.id);
       unsubscribe();
     };
   }, [userData?.id, selectedUserId, conversations]);
+
+  // Cleanup effect when user logs out
+  useEffect(() => {
+    if (!userData?.id) {
+      console.log('🔔 NOTIFICATION DEBUG: User logged out, cleaning up notifications');
+      // Reset permission flag so it can be requested again on next login
+      hasRequestedPermission.current = false;
+      // Clear any active notifications
+      if ('Notification' in window && Notification.permission === 'granted') {
+        // Close any active notifications
+        navigator.serviceWorker.getRegistrations().then(registrations => {
+          registrations.forEach(registration => {
+            registration.getNotifications().then(notifications => {
+              notifications.forEach(notification => {
+                console.log('🔔 NOTIFICATION DEBUG: Closing notification:', notification.title);
+                notification.close();
+              });
+            });
+          });
+        });
+      }
+    }
+  }, [userData]);
 
   return {
     canNotify: notificationService.canNotify(),
