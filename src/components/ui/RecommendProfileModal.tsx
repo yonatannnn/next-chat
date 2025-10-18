@@ -60,8 +60,8 @@ export const RecommendProfileModal: React.FC<RecommendProfileModalProps> = ({
   };
 
   const handleUpload = async () => {
-    if (!selectedImage || !supabase) {
-      setError('Please select an image to upload');
+    if (!croppedImage || !supabase) {
+      setError('Please select and crop an image to upload');
       return;
     }
 
@@ -69,12 +69,12 @@ export const RecommendProfileModal: React.FC<RecommendProfileModalProps> = ({
     setError(null);
 
     try {
-      const fileExt = selectedImage.name.split('.').pop();
+      const fileExt = croppedImage.name.split('.').pop();
       const fileName = `profile-recommendations/${Date.now()}.${fileExt}`;
 
       const { data, error: uploadError } = await supabase.storage
         .from('chat-files')
-        .upload(fileName, selectedImage, {
+        .upload(fileName, croppedImage, {
           cacheControl: '3600',
           upsert: false
         });
@@ -97,7 +97,7 @@ export const RecommendProfileModal: React.FC<RecommendProfileModalProps> = ({
   };
 
   const handleSend = async () => {
-    if (!imageUrl || !selectedImage) {
+    if (!imageUrl || !croppedImage) {
       setError('Please upload an image first');
       return;
     }
