@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useAuthStore } from '../store/authStore';
 import { authService } from '../services/authService';
+import { pushNotificationService } from '@/services/pushNotificationService';
 
 export const useAuth = () => {
   const { 
@@ -66,7 +67,9 @@ export const useAuth = () => {
   const handleLogout = async () => {
     setLoading(true);
     try {
-      await authService.logout();
+      // Get device ID from localStorage
+      const deviceId = localStorage.getItem('push_device_id');
+      await authService.logout(userData?.id, deviceId || undefined);
       logout();
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : 'An error occurred');

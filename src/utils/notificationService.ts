@@ -158,6 +158,36 @@ class NotificationService {
   }
 
   /**
+   * Generate unique device ID for this browser/device
+   */
+  private generateDeviceId(): string {
+    // Try to get existing device ID from localStorage
+    let deviceId = localStorage.getItem('push_device_id');
+    
+    if (!deviceId) {
+      // Generate new device ID based on browser fingerprint
+      const fingerprint = [
+        navigator.userAgent,
+        navigator.language,
+        screen.width + 'x' + screen.height,
+        new Date().getTimezoneOffset(),
+        navigator.hardwareConcurrency || 'unknown'
+      ].join('|');
+      
+      // Create a hash-like ID from fingerprint
+      deviceId = btoa(fingerprint).replace(/[^a-zA-Z0-9]/g, '').substring(0, 16);
+      
+      // Add timestamp for uniqueness
+      deviceId += '-' + Date.now().toString(36);
+      
+      // Store for future use
+      localStorage.setItem('push_device_id', deviceId);
+    }
+    
+    return deviceId;
+  }
+
+  /**
    * Register push subscription with server
    */
   async registerPushSubscription(userId: string): Promise<boolean> {
@@ -168,8 +198,12 @@ class NotificationService {
         return false;
       }
 
+      const deviceId = this.generateDeviceId();
+      console.log('Registering push subscription for device:', deviceId);
+
       const success = await pushNotificationService.storePushSubscription({
         userId,
+        deviceId,
         endpoint: subscriptionData.endpoint,
         p256dh: subscriptionData.keys.p256dh,
         auth: subscriptionData.keys.auth,
@@ -178,7 +212,7 @@ class NotificationService {
       });
 
       if (success) {
-        console.log('Push subscription registered with server for user:', userId);
+        console.log('Push subscription registered with server for user:', userId, 'device:', deviceId);
       } else {
         console.error('Failed to register push subscription with server');
       }

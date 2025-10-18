@@ -8,6 +8,7 @@ import {
 import { doc, setDoc, getDoc, updateDoc, serverTimestamp, collection, query, where, getDocs } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { supabase } from '@/lib/supabase';
+import { pushNotificationService } from '@/services/pushNotificationService';
 
 export interface UserData {
   id: string;
@@ -85,12 +86,32 @@ export const authService = {
     }
   },
 
-  async logout() {
+  async logout(userId?: string, deviceId?: string) {
     if (!auth) {
       throw new Error('Firebase not initialized');
     }
     
     try {
+      // Clean up push notification subscription before logout
+      if (userId && deviceId) {
+        try {
+          await pushNotificationService.removePushSubscriptionForDevice(userId, deviceId);
+          console.log('Push subscription removed for device on logout:', deviceId);
+        } catch (error) {
+          console.error('Failed to remove push subscription on logout:', error);
+          // Don't fail logout if push cleanup fails
+        }
+      } else if (userId) {
+        // Fallback to remove all subscriptions if no device ID
+        try {
+          await pushNotificationService.removePushSubscription(userId);
+          console.log('All push subscriptions removed on logout');
+        } catch (error) {
+          console.error('Failed to remove push subscriptions on logout:', error);
+          // Don't fail logout if push cleanup fails
+        }
+      }
+      
       await signOut(auth);
     } catch (error: unknown) {
       throw new Error(error instanceof Error ? error.message : 'An error occurred');

@@ -10,9 +10,9 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey);
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === 'POST') {
     try {
-      const { userId, endpoint, p256dh, auth, userAgent, platform } = req.body;
+      const { userId, deviceId, endpoint, p256dh, auth, userAgent, platform } = req.body;
 
-      if (!userId || !endpoint || !p256dh || !auth) {
+      if (!userId || !deviceId || !endpoint || !p256dh || !auth) {
         return res.status(400).json({ error: 'Missing required fields' });
       }
 
@@ -22,6 +22,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .from('push_subscriptions')
         .upsert({
           user_id: userId,
+          device_id: deviceId,
           endpoint: endpoint,
           p256dh: p256dh,
           auth: auth,
@@ -29,7 +30,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           platform: platform,
           updated_at: new Date().toISOString()
         }, {
-          onConflict: 'user_id'
+          onConflict: 'user_id,device_id'
         });
 
       if (error) {
@@ -51,28 +52,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(400).json({ error: 'Missing userId parameter' });
       }
 
-      // Get push subscription using service role
+      // Get all push subscriptions for user using service role
       const { data, error } = await supabase
         .from('push_subscriptions')
         .select('*')
-        .eq('user_id', userId)
-        .single();
+        .eq('user_id', userId);
 
       if (error) {
-        console.error('Error getting push subscription:', error);
-        return res.status(500).json({ error: 'Failed to get push subscription' });
+        console.error('Error getting push subscriptions:', error);
+        return res.status(500).json({ error: 'Failed to get push subscriptions' });
       }
 
-      const subscription = data ? {
-        userId: data.user_id,
-        endpoint: data.endpoint,
-        p256dh: data.p256dh,
-        auth: data.auth,
-        userAgent: data.user_agent,
-        platform: data.platform
-      } : null;
+      const subscriptions = data ? data.map(sub => ({
+        userId: sub.user_id,
+        deviceId: sub.device_id,
+        endpoint: sub.endpoint,
+        p256dh: sub.p256dh,
+        auth: sub.auth,
+        userAgent: sub.user_agent,
+        platform: sub.platform
+      })) : [];
 
-      return res.status(200).json({ subscription });
+      return res.status(200).json({ subscriptions });
 
     } catch (error: any) {
       console.error('Error in push-subscriptions GET API:', error);
