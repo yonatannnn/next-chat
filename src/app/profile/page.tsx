@@ -7,6 +7,7 @@ import { authService } from '@/features/auth/services/authService';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { ImageCropper } from '@/components/ui/ImageCropper';
 import { ArrowLeft, Camera, Save, User, Mail, Calendar, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 
 // Force dynamic rendering
@@ -27,6 +28,8 @@ function ProfilePage() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
   const [createdAt, setCreatedAt] = useState<string>('');
+  const [isCropperOpen, setIsCropperOpen] = useState(false);
+  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
   
   useEffect(() => {
     if (userData) {
@@ -51,7 +54,7 @@ function ProfilePage() {
   };
 
 
-  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -67,9 +70,15 @@ function ProfilePage() {
       return;
     }
 
+    // Open cropper with the selected file
+    setSelectedImageFile(file);
+    setIsCropperOpen(true);
+  };
+
+  const handleCropComplete = async (croppedFile: File) => {
     setIsAvatarLoading(true);
     try {
-      const avatarUrl = await authService.uploadAvatar(file, user?.uid!);
+      const avatarUrl = await authService.uploadAvatar(croppedFile, user?.uid!);
       setAvatar(avatarUrl);
       setSaveMessage('Avatar updated successfully!');
     } catch (error) {
@@ -327,6 +336,21 @@ function ProfilePage() {
         onChange={handleAvatarChange}
         className="hidden"
       />
+
+      {/* Image Cropper Modal */}
+      {selectedImageFile && (
+        <ImageCropper
+          isOpen={isCropperOpen}
+          onClose={() => {
+            setIsCropperOpen(false);
+            setSelectedImageFile(null);
+          }}
+          onCropComplete={handleCropComplete}
+          imageFile={selectedImageFile}
+          aspectRatio={1}
+          title="Crop Profile Picture"
+        />
+      )}
     </div>
   );
 }

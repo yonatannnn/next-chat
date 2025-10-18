@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, Upload, Send, Loader2 } from 'lucide-react';
 import { Button } from './Button';
 import { Input } from './Input';
+import { ImageCropper } from './ImageCropper';
 import { supabase } from '@/lib/supabase';
 
 interface RecommendProfileModalProps {
@@ -23,6 +24,8 @@ export const RecommendProfileModal: React.FC<RecommendProfileModalProps> = ({
   const [isUploading, setIsUploading] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isCropperOpen, setIsCropperOpen] = useState(false);
+  const [croppedImage, setCroppedImage] = useState<File | null>(null);
 
   const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -40,10 +43,20 @@ export const RecommendProfileModal: React.FC<RecommendProfileModalProps> = ({
       setSelectedImage(file);
       setError(null);
       
-      // Create preview URL for display only
-      const previewUrl = URL.createObjectURL(file);
-      setImageUrl(previewUrl);
+      // Open cropper with the selected file
+      setIsCropperOpen(true);
     }
+  };
+
+  const handleCropComplete = (croppedFile: File) => {
+    setCroppedImage(croppedFile);
+    setSelectedImage(croppedFile);
+    
+    // Create preview URL for display
+    const previewUrl = URL.createObjectURL(croppedFile);
+    setImageUrl(previewUrl);
+    
+    setIsCropperOpen(false);
   };
 
   const handleUpload = async () => {
@@ -113,6 +126,8 @@ export const RecommendProfileModal: React.FC<RecommendProfileModalProps> = ({
     setImageUrl('');
     setMessage('');
     setError(null);
+    setCroppedImage(null);
+    setIsCropperOpen(false);
     onClose();
   };
 
@@ -156,8 +171,8 @@ export const RecommendProfileModal: React.FC<RecommendProfileModalProps> = ({
             )}
           </div>
 
-          {/* Upload Button - Show only for blob URLs (previews) */}
-          {selectedImage && imageUrl.startsWith('blob:') && (
+          {/* Upload Button - Show only for cropped images */}
+          {croppedImage && imageUrl.startsWith('blob:') && (
             <Button
               onClick={handleUpload}
               disabled={isUploading}
@@ -171,7 +186,7 @@ export const RecommendProfileModal: React.FC<RecommendProfileModalProps> = ({
               ) : (
                 <>
                   <Upload size={16} className="mr-2" />
-                  Upload Image
+                  Upload Cropped Image
                 </>
               )}
             </Button>
@@ -186,7 +201,7 @@ export const RecommendProfileModal: React.FC<RecommendProfileModalProps> = ({
                 </label>
                 {imageUrl.startsWith('blob:') ? (
                   <span className="text-xs text-orange-600 bg-orange-100 px-2 py-1 rounded">
-                    Preview Only
+                    Cropped - Ready to Upload
                   </span>
                 ) : (
                   <span className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded">
@@ -250,6 +265,21 @@ export const RecommendProfileModal: React.FC<RecommendProfileModalProps> = ({
           </Button>
         </div>
       </div>
+
+      {/* Image Cropper Modal */}
+      {selectedImage && (
+        <ImageCropper
+          isOpen={isCropperOpen}
+          onClose={() => {
+            setIsCropperOpen(false);
+            setSelectedImage(null);
+          }}
+          onCropComplete={handleCropComplete}
+          imageFile={selectedImage}
+          aspectRatio={1}
+          title="Crop Recommendation Image"
+        />
+      )}
     </div>
   );
 };
