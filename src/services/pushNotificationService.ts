@@ -220,7 +220,85 @@ class PushNotificationService {
     };
 
     console.log('🔔 PUSH DEBUG: Sending push notification to all devices for user:', receiverId);
-    return await this.sendPushNotificationToAllDevices(receiverId, payload);
+    
+    // Send both web push notifications and FCM notifications
+    const webPushResult = await this.sendPushNotificationToAllDevices(receiverId, payload);
+    const fcmResult = await this.sendFCMNotificationToMobileDevices(receiverId, payload);
+    
+    return webPushResult || fcmResult;
+  }
+
+  /**
+   * Send FCM notification to mobile devices
+   */
+  async sendFCMNotificationToMobileDevices(userId: string, payload: NotificationPayload): Promise<boolean> {
+    try {
+      console.log('🔔 FCM DEBUG: Sending FCM notification to mobile devices for user:', userId);
+      
+      // Get all mobile device subscriptions for the user
+      const subscriptions = await this.getAllPushSubscriptions(userId);
+      console.log('🔔 FCM DEBUG: All subscriptions for user:', subscriptions);
+      
+      const mobileSubscriptions = subscriptions.filter(sub => 
+        sub.platform === 'android' || sub.platform === 'ios' || 
+        sub.userAgent?.includes('flutter_mobile') || 
+        sub.endpoint?.includes('fcm')
+      );
+
+      console.log('🔔 FCM DEBUG: Mobile subscriptions found:', mobileSubscriptions);
+
+      if (mobileSubscriptions.length === 0) {
+        console.log('🔔 FCM DEBUG: No mobile devices found for user:', userId);
+        console.log('🔔 FCM DEBUG: Available subscriptions:', subscriptions.map(sub => ({
+          platform: sub.platform,
+          userAgent: sub.userAgent,
+          endpoint: sub.endpoint?.substring(0, 20) + '...'
+        })));
+        return false;
+      }
+
+      console.log(`🔔 FCM DEBUG: Found ${mobileSubscriptions.length} mobile devices for user:`, userId);
+
+      let successCount = 0;
+      const promises = mobileSubscriptions.map(async (subscription) => {
+        try {
+          console.log(`🔔 FCM DEBUG: Sending to device ${subscription.deviceId} with token: ${subscription.endpoint?.substring(0, 20)}...`);
+          
+          // Send FCM notification using the server API
+          const response = await fetch('/api/fcm-notification', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              token: subscription.endpoint,
+              title: payload.title,
+              body: payload.body,
+              data: payload.data
+            })
+          });
+
+          const responseText = await response.text();
+          console.log(`🔔 FCM DEBUG: Response for device ${subscription.deviceId}:`, response.status, responseText);
+
+          if (response.ok) {
+            successCount++;
+            console.log(`🔔 FCM DEBUG: FCM notification sent to device ${subscription.deviceId}`);
+          } else {
+            console.error(`🔔 FCM DEBUG: Failed to send FCM notification to device ${subscription.deviceId}:`, response.statusText, responseText);
+          }
+        } catch (error) {
+          console.error(`🔔 FCM DEBUG: Error sending FCM notification to device ${subscription.deviceId}:`, error);
+        }
+      });
+
+      await Promise.all(promises);
+      console.log(`🔔 FCM DEBUG: FCM notifications sent to ${successCount}/${mobileSubscriptions.length} mobile devices for user:`, userId);
+      return successCount > 0;
+    } catch (error) {
+      console.error('🔔 FCM DEBUG: Error sending FCM notifications to mobile devices:', error);
+      return false;
+    }
   }
 
   /**
@@ -282,5 +360,5 @@ class PushNotificationService {
     }
   }
 }
-
 export const pushNotificationService = new PushNotificationService();
+

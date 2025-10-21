@@ -139,19 +139,19 @@ function ProfilePage() {
   // Show loading state while auth is loading
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading profile...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400 mx-auto"></div>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">Loading profile...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200">
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-4xl mx-auto px-4 py-3 md:py-4">
           <div className="flex items-center space-x-3 md:space-x-4">
             <Button
@@ -163,13 +163,13 @@ function ProfilePage() {
               <ArrowLeft size={18} className="md:w-5 md:h-5" />
               <span className="text-sm md:text-base">Back</span>
             </Button>
-            <h1 className="text-xl md:text-2xl font-bold text-gray-900">Profile Settings</h1>
+            <h1 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">Profile Settings</h1>
           </div>
         </div>
       </div>
 
       <div className="max-w-4xl mx-auto px-4 py-6 md:py-8">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
           {/* Profile Header */}
           <div className="bg-gradient-to-r from-blue-500 to-purple-600 px-4 md:px-8 py-8 md:py-12">
             <div className="flex items-center space-x-4 md:space-x-6">
@@ -209,7 +209,7 @@ function ProfilePage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
               {/* Full Name */}
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Full Name
                 </label>
                 <Input
@@ -222,7 +222,7 @@ function ProfilePage() {
 
               {/* Username */}
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Username
                 </label>
                 <Input
@@ -235,49 +235,49 @@ function ProfilePage() {
 
               {/* Email (Read-only) */}
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Email Address
                 </label>
                 <div className="relative">
                   <Input
                     value={formData.email}
                     disabled
-                    className="bg-gray-50 cursor-not-allowed"
+                    className="bg-gray-50 dark:bg-gray-700 cursor-not-allowed"
                   />
-                  <Mail size={16} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                  <Mail size={16} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500" />
                 </div>
-                <p className="text-sm text-gray-500">Email cannot be changed</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Email cannot be changed</p>
               </div>
             </div>
 
             {/* Additional Info */}
             <div className="mt-6 md:mt-8 grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
-              <div className="bg-gray-50 rounded-lg p-3 md:p-4">
+              <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 md:p-4">
                 <div className="flex items-center space-x-3">
-                  <User size={18} className="text-gray-600 md:w-5 md:h-5" />
+                  <User size={18} className="text-gray-600 dark:text-gray-400 md:w-5 md:h-5" />
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-gray-900">Profile ID</p>
-                    <p className="text-xs text-gray-500 font-mono truncate">{user?.uid}</p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">Profile ID</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 font-mono truncate">{user?.uid}</p>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-gray-50 rounded-lg p-3 md:p-4">
+              <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 md:p-4">
                 <div className="flex items-center space-x-3">
-                  <Calendar size={18} className="text-gray-600 md:w-5 md:h-5" />
+                  <Calendar size={18} className="text-gray-600 dark:text-gray-400 md:w-5 md:h-5" />
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-gray-900">Account Created</p>
-                    <p className="text-xs text-gray-500">{createdAt || 'Unknown'}</p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">Account Created</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{createdAt || 'Unknown'}</p>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-gray-50 rounded-lg p-3 md:p-4">
+              <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 md:p-4">
                 <div className="flex items-center space-x-3">
-                  <CheckCircle size={18} className="text-green-600 md:w-5 md:h-5" />
+                  <CheckCircle size={18} className="text-green-600 dark:text-green-400 md:w-5 md:h-5" />
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-gray-900">Account Status</p>
-                    <p className="text-xs text-green-600">Verified</p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">Account Status</p>
+                    <p className="text-xs text-green-600 dark:text-green-400">Verified</p>
                   </div>
                 </div>
               </div>
@@ -287,8 +287,8 @@ function ProfilePage() {
             {saveMessage && (
               <div className={`mt-6 p-4 rounded-lg ${
                 saveMessage.includes('success') 
-                  ? 'bg-green-50 border border-green-200 text-green-800' 
-                  : 'bg-blue-50 border border-blue-200 text-blue-800'
+                  ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-800 dark:text-green-200' 
+                  : 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-200'
               }`}>
                 <p className="text-sm font-medium">{saveMessage}</p>
               </div>

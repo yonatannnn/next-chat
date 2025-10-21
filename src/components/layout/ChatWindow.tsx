@@ -699,12 +699,12 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
 
   if (!selectedUserId && !selectedGroupId) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-gray-50 p-4">
+      <div className="flex-1 flex items-center justify-center bg-gray-50 dark:bg-gray-800 p-4">
         <div className="text-center max-w-sm">
-          <h3 className="text-lg font-medium text-gray-900 mb-2">
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
             Select a chat to start messaging
           </h3>
-          <p className="text-gray-500 text-sm md:text-base">
+          <p className="text-gray-500 dark:text-gray-400 text-sm md:text-base">
             Choose a user or group from the sidebar to begin your conversation
           </p>
         </div>
@@ -713,9 +713,9 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   }
 
   return (
-    <div className="flex-1 flex flex-col bg-white h-full overflow-hidden">
+    <div className="flex-1 flex flex-col bg-white dark:bg-gray-900 h-full overflow-hidden">
       {/* Chat Header - Fixed - Hidden on mobile since mobile header shows this info */}
-      <div className="hidden md:flex flex-shrink-0 border-b border-gray-200 p-3 md:p-4">
+      <div className="hidden md:flex flex-shrink-0 border-b border-gray-200 dark:border-gray-700 p-3 md:p-4">
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center space-x-2 md:space-x-3 min-w-0 flex-1">
             <button
@@ -730,11 +730,11 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
               />
             </button>
             <div className="min-w-0 flex-1">
-              <h3 className="font-semibold text-gray-900 text-sm md:text-base truncate">
+              <h3 className="font-semibold text-gray-900 dark:text-white text-sm md:text-base truncate">
                 {isGroupChat ? selectedGroup?.groupName : selectedUser?.username}
               </h3>
               {isGroupChat && selectedGroup && (
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-gray-500 dark:text-gray-400">
                   {selectedGroup.memberCount} member{selectedGroup.memberCount !== 1 ? 's' : ''}
                 </p>
               )}
@@ -748,7 +748,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
 
       {/* Search Interface */}
       {isSearchOpen && (
-        <div className="flex-shrink-0 border-b border-gray-200 p-3 bg-gray-50">
+        <div className="flex-shrink-0 border-b border-gray-200 dark:border-gray-700 p-3 bg-gray-50 dark:bg-gray-800">
           <div className="flex items-center space-x-2">
             <div className="flex-1 relative">
               <input
@@ -756,13 +756,13 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                 placeholder="Search messages..."
                 value={searchQuery}
                 onChange={(e) => handleSearch(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 autoFocus
               />
               {searchQuery && (
                 <button
                   onClick={closeSearch}
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
                 >
                   <X size={16} />
                 </button>
@@ -770,19 +770,19 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
             </div>
             {searchResults.length > 0 && (
               <div className="flex items-center space-x-1">
-                <span className="text-sm text-gray-600">
+                <span className="text-sm text-gray-600 dark:text-gray-400">
                   {currentSearchIndex + 1} of {searchResults.length}
                 </span>
                 <button
                   onClick={() => navigateSearch('up')}
-                  className="p-1 text-gray-400 hover:text-gray-600"
+                  className="p-1 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
                   disabled={searchResults.length === 0}
                 >
                   <ChevronUp size={16} />
                 </button>
                 <button
                   onClick={() => navigateSearch('down')}
-                  className="p-1 text-gray-400 hover:text-gray-600"
+                  className="p-1 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
                   disabled={searchResults.length === 0}
                 >
                   <ChevronDown size={16} />
@@ -794,7 +794,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       )}
 
       {/* Messages - Scrollable */}
-      <div className="messages-container flex-1 overflow-y-auto min-h-0 p-3 md:p-4 space-y-3 md:space-y-4 pt-4 md:pt-4 overflow-x-hidden">
+      <div className="messages-container flex-1 overflow-y-auto min-h-0 p-3 md:p-4 space-y-3 md:space-y-4 pt-4 md:pt-4 overflow-x-hidden bg-white dark:bg-gray-900">
         {/* Messages */}
         {messages.map((message) => {
           const isOwn = message.senderId === userData?.id;

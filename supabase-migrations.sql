@@ -26,7 +26,7 @@ CREATE POLICY "Users can manage their own push subscriptions" ON push_subscripti
 -- Create policy for service role to access all subscriptions (for sending notifications)
 CREATE POLICY "Service role can access all push subscriptions" ON push_subscriptions
   FOR ALL USING (auth.role() = 'service_role');
-
 -- Alternative policy for Firebase Auth users (uncomment if using Firebase Auth)
 -- CREATE POLICY "Firebase users can manage their own push subscriptions" ON push_subscriptions
 --   FOR ALL USING (true); -- This allows all authenticated users to manage subscriptions
+

@@ -120,16 +120,16 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   };
 
   return (
-    <div className="border-t border-gray-200 p-3 md:p-4">
+    <div className="border-t border-gray-200 dark:border-gray-700 p-3 md:p-4 bg-white dark:bg-gray-900">
       {/* Reply preview */}
       {replyingTo && (
-        <div className="mb-3 p-3 bg-gray-50 border-l-4 border-blue-500 rounded-r-lg">
+        <div className="mb-3 p-3 bg-gray-50 dark:bg-gray-800 border-l-4 border-blue-500 dark:border-blue-400 rounded-r-lg">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
-              <div className="text-sm font-medium text-gray-700 mb-1">
+              <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Replying to {replyingTo.senderId}
               </div>
-              <div className="text-sm text-gray-600 truncate">
+              <div className="text-sm text-gray-600 dark:text-gray-400 truncate">
                 {replyingTo.text.length > 100 
                   ? `${replyingTo.text.substring(0, 100)}...` 
                   : replyingTo.text}
@@ -138,7 +138,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
             <button
               type="button"
               onClick={onCancelReply}
-              className="ml-2 p-1 text-gray-400 hover:text-gray-600 transition-colors"
+              className="ml-2 p-1 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
               title="Cancel reply"
             >
               <X size={16} />
@@ -160,7 +160,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
           type="button"
           onClick={() => fileInputRef.current?.click()}
           disabled={disabled || isUploading}
-          className="p-1.5 md:p-2 text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-50 flex-shrink-0"
+          className="p-1.5 md:p-2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors disabled:opacity-50 flex-shrink-0"
           title="Upload file"
         >
           <Paperclip size={18} className="md:w-5 md:h-5" />

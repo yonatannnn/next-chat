@@ -10,6 +10,8 @@ import { useConversations } from '@/features/chat/hooks/useConversations';
 import { useGroupConversations } from '@/features/chat/hooks/useGroupConversations';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { LogOut, MessageCircle, Settings, Search, X, Bell, Users, Plus, Eye, EyeOff, Archive, AlertTriangle, Lock } from 'lucide-react';
+import { ThemeToggle } from '@/components/ui/ThemeToggle';
+import { useTheme } from '@/contexts/ThemeContext';
 
 export const Sidebar: React.FC = () => {
   const router = useRouter();
@@ -170,9 +172,9 @@ export const Sidebar: React.FC = () => {
   const displayList = searchQuery.trim() ? searchResults : (activeTab === 'chats' ? filteredConversations : groupConversations);
 
   return (
-    <div className="w-full bg-white border-r border-gray-200 flex flex-col h-full">
+    <div className="w-full bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 flex flex-col h-full">
       {/* Header - Fixed */}
-      <div className="flex-shrink-0 p-3 md:p-4 border-b border-gray-200">
+      <div className="flex-shrink-0 p-3 md:p-4 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3 min-w-0 flex-1">
               <button
@@ -187,13 +189,14 @@ export const Sidebar: React.FC = () => {
                 />
               </button>
               <div className="min-w-0 flex-1">
-                <h2 className="font-semibold text-gray-900 truncate">{userData?.username}</h2>
+                <h2 className="font-semibold text-gray-900 dark:text-white truncate">{userData?.username}</h2>
               </div>
             </div>
             <div className="flex items-center space-x-1 md:space-x-2">
+              <ThemeToggle />
               <button
                 onClick={() => setIsNotificationSettingsOpen(true)}
-                className="p-1.5 md:p-2 text-gray-400 hover:text-gray-600 transition-colors"
+                className="p-1.5 md:p-2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors"
                 title="Notification Settings"
               >
                 <Bell size={18} className="md:w-5 md:h-5" />
@@ -201,18 +204,18 @@ export const Sidebar: React.FC = () => {
               <button
                 onClick={handleSettingsNavigation}
                 disabled={isNavigatingToSettings}
-                className="p-1.5 md:p-2 text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-50"
+                className="p-1.5 md:p-2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors disabled:opacity-50"
                 title="Profile Settings"
               >
                 {isNavigatingToSettings ? (
-                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-400 border-t-transparent"></div>
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-400 dark:border-gray-500 border-t-transparent"></div>
                 ) : (
                   <Settings size={18} className="md:w-5 md:h-5" />
                 )}
               </button>
               <button
                 onClick={handleLogoutClick}
-                className="p-1.5 md:p-2 text-gray-400 hover:text-gray-600 transition-colors"
+                className="p-1.5 md:p-2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors"
                 title="Logout"
               >
                 <LogOut size={18} className="md:w-5 md:h-5" />
@@ -222,14 +225,14 @@ export const Sidebar: React.FC = () => {
       </div>
 
       {/* Tab Navigation */}
-      <div className="flex-shrink-0 border-b border-gray-200">
+      <div className="flex-shrink-0 border-b border-gray-200 dark:border-gray-700">
         <div className="flex">
           <button
             onClick={() => setActiveTab('chats')}
             className={`flex-1 flex items-center justify-center space-x-2 py-3 px-4 text-sm font-medium transition-colors ${
               activeTab === 'chats'
-                ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
-                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/20'
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
             }`}
           >
             <MessageCircle size={16} />
@@ -239,8 +242,8 @@ export const Sidebar: React.FC = () => {
             onClick={() => setActiveTab('groups')}
             className={`flex-1 flex items-center justify-center space-x-2 py-3 px-4 text-sm font-medium transition-colors ${
               activeTab === 'groups'
-                ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
-                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/20'
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
             }`}
           >
             <Users size={16} />
@@ -250,10 +253,10 @@ export const Sidebar: React.FC = () => {
       </div>
 
       {/* Search - Fixed */}
-      <div className="flex-shrink-0 p-3 md:p-4 border-b border-gray-200">
+      <div className="flex-shrink-0 p-3 md:p-4 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center space-x-2">
           <div className="relative flex-1">
-            <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+            <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500" />
             <Input
               type="text"
               placeholder={activeTab === 'chats' ? "Search users..." : "Search groups..."}
@@ -267,7 +270,7 @@ export const Sidebar: React.FC = () => {
                   setSearchQuery('');
                   setSearchResults([]);
                 }}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
               >
                 <X size={16} />
               </button>
@@ -276,7 +279,7 @@ export const Sidebar: React.FC = () => {
           {activeTab === 'groups' && (
             <button
               onClick={() => setIsCreateGroupOpen(true)}
-              className="p-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-md transition-colors"
+              className="p-2 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md transition-colors"
               title="Create Group"
             >
               <Plus size={18} />
@@ -289,13 +292,13 @@ export const Sidebar: React.FC = () => {
       <div className="flex-1 overflow-y-auto min-h-0">
         <div className="p-3 md:p-4">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-medium text-gray-500">
+            <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">
               {searchQuery.trim() ? 'Search Results' : (activeTab === 'chats' ? 'Conversations' : 'Groups')}
             </h3>
             {activeTab === 'chats' && !searchQuery.trim() && (
               <button
                 onClick={() => setShowHidden(!showHidden)}
-                className="flex items-center space-x-1 text-xs text-gray-500 hover:text-gray-700 transition-colors"
+                className="flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
                 title={showHidden ? 'Hide archived chats' : 'Show archived chats'}
               >
                 {showHidden ? <EyeOff size={14} /> : <Archive size={14} />}
@@ -307,11 +310,11 @@ export const Sidebar: React.FC = () => {
             {isSearching ? (
               <div className="flex items-center justify-center py-6 md:py-8">
                 <div className="animate-spin rounded-full h-5 w-5 md:h-6 md:w-6 border-b-2 border-blue-600"></div>
-                <span className="ml-2 text-gray-500 text-sm">Searching...</span>
+                <span className="ml-2 text-gray-500 dark:text-gray-400 text-sm">Searching...</span>
               </div>
             ) : displayList.length === 0 ? (
               <div className="text-center py-6 md:py-8">
-                <p className="text-gray-500 text-sm">
+                <p className="text-gray-500 dark:text-gray-400 text-sm">
                   {searchQuery.trim() 
                     ? (activeTab === 'chats' ? 'No users found' : 'No groups found')
                     : (activeTab === 'chats' ? 'No conversations yet' : 'No groups yet')
@@ -320,7 +323,7 @@ export const Sidebar: React.FC = () => {
                 {activeTab === 'groups' && !searchQuery.trim() && (
                   <button
                     onClick={() => setIsCreateGroupOpen(true)}
-                    className="mt-2 text-blue-600 hover:text-blue-700 text-sm font-medium"
+                    className="mt-2 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 text-sm font-medium"
                   >
                     Create your first group
                   </button>
@@ -336,8 +339,8 @@ export const Sidebar: React.FC = () => {
                     key={isGroup ? item.groupId : item.userId}
                     className={`group relative w-full flex items-center space-x-2 md:space-x-3 p-2 md:p-3 rounded-lg transition-colors ${
                       isSelected
-                        ? 'bg-blue-50 border border-blue-200'
-                        : 'hover:bg-gray-50'
+                        ? 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700'
+                        : 'hover:bg-gray-50 dark:hover:bg-gray-800'
                     }`}
                   >
                     <button
@@ -358,32 +361,32 @@ export const Sidebar: React.FC = () => {
                     </div>
                     <div className="flex-1 text-left min-w-0">
                       <div className="flex items-center justify-between">
-                        <h4 className={`font-medium text-sm md:text-base ${item.unreadCount > 0 ? 'font-bold' : 'font-normal'} text-gray-900 truncate`}>
+                        <h4 className={`font-medium text-sm md:text-base ${item.unreadCount > 0 ? 'font-bold' : 'font-normal'} text-gray-900 dark:text-white truncate`}>
                           {isGroup ? item.groupName : item.username}
                         </h4>
                         {item.lastMessageTime && (
-                          <span className="text-xs text-gray-500 flex-shrink-0 ml-2">
+                          <span className="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0 ml-2">
                             {formatTime(item.lastMessageTime)}
                           </span>
                         )}
                       </div>
                       {item.lastMessage && (
-                        <p className={`text-xs md:text-sm text-gray-500 truncate ${
+                        <p className={`text-xs md:text-sm text-gray-500 dark:text-gray-400 truncate ${
                           item.lastMessage.startsWith('Me: ') || item.lastMessageSeen ? 'font-normal' : 'font-bold'
                         }`}>
                           {item.lastMessage}
                         </p>
                       )}
                       {isGroup && (
-                        <p className="text-xs text-gray-400 mt-1">
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
                           {item.memberCount} member{item.memberCount !== 1 ? 's' : ''}
                         </p>
                       )}
                     </div>
                       {isGroup ? (
-                        <Users size={14} className="text-gray-400 flex-shrink-0 md:w-4 md:h-4" />
+                        <Users size={14} className="text-gray-400 dark:text-gray-500 flex-shrink-0 md:w-4 md:h-4" />
                       ) : (
-                        <MessageCircle size={14} className="text-gray-400 flex-shrink-0 md:w-4 md:h-4" />
+                        <MessageCircle size={14} className="text-gray-400 dark:text-gray-500 flex-shrink-0 md:w-4 md:h-4" />
                       )}
                     </button>
                     
@@ -411,16 +414,16 @@ export const Sidebar: React.FC = () => {
       {/* Password Dialog */}
       {showPasswordDialog && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md mx-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md mx-4">
             <div className="flex items-center space-x-3 mb-4">
-              <div className="bg-blue-100 p-2 rounded-full">
-                <Lock size={24} className="text-blue-600" />
+              <div className="bg-blue-100 dark:bg-blue-900/20 p-2 rounded-full">
+                <Lock size={24} className="text-blue-600 dark:text-blue-400" />
               </div>
-              <h3 className="text-lg font-semibold text-gray-900">Access Hard-Hidden Chats</h3>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Access Hard-Hidden Chats</h3>
             </div>
             
             <div className="mb-6">
-              <p className="text-gray-600 mb-4">
+              <p className="text-gray-600 dark:text-gray-300 mb-4">
                 Enter password to access hard-hidden conversations:
               </p>
               <input
@@ -428,7 +431,7 @@ export const Sidebar: React.FC = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Enter password"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 onKeyDown={(e) => e.key === 'Enter' && handlePasswordSubmit()}
               />
             </div>
@@ -439,13 +442,13 @@ export const Sidebar: React.FC = () => {
                   setShowPasswordDialog(false);
                   setPassword('');
                 }}
-                className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                className="flex-1 px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-600 hover:bg-gray-200 dark:hover:bg-gray-500 rounded-lg transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handlePasswordSubmit}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg transition-colors"
+                className="flex-1 px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white hover:bg-blue-700 dark:hover:bg-blue-600 rounded-lg transition-colors"
               >
                 Access
               </button>
@@ -457,31 +460,31 @@ export const Sidebar: React.FC = () => {
       {/* Hard-Hidden Chats Section */}
       {showHardHiddenChats && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-2xl mx-4 max-h-[80vh] overflow-y-auto">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-2xl mx-4 max-h-[80vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center space-x-3">
-                <div className="bg-red-100 p-2 rounded-full">
-                  <Lock size={24} className="text-red-600" />
+                <div className="bg-red-100 dark:bg-red-900/20 p-2 rounded-full">
+                  <Lock size={24} className="text-red-600 dark:text-red-400" />
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900">Hard-Hidden Chats</h3>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Hard-Hidden Chats</h3>
               </div>
               <button
                 onClick={() => setShowHardHiddenChats(false)}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
               >
                 <X size={24} />
               </button>
             </div>
             
             <div className="mb-4">
-              <p className="text-gray-600">
+              <p className="text-gray-600 dark:text-gray-300">
                 These conversations are hard-hidden and require password access to unhide.
               </p>
             </div>
             
             {hardHiddenConversations.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                <Lock size={48} className="mx-auto mb-4 text-gray-300" />
+              <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                <Lock size={48} className="mx-auto mb-4 text-gray-300 dark:text-gray-600" />
                 <p>No hard-hidden conversations found.</p>
               </div>
             ) : (
@@ -489,7 +492,7 @@ export const Sidebar: React.FC = () => {
                 {hardHiddenConversations.map((conv) => (
                   <div
                     key={conv.userId}
-                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                    className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"
                   >
                     <div className="flex items-center space-x-3">
                       <Avatar
@@ -498,13 +501,13 @@ export const Sidebar: React.FC = () => {
                         size="sm"
                       />
                       <div>
-                        <h4 className="font-medium text-gray-900">{conv.username}</h4>
-                        <p className="text-sm text-gray-500">{conv.email}</p>
+                        <h4 className="font-medium text-gray-900 dark:text-white">{conv.username}</h4>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">{conv.email}</p>
                       </div>
                     </div>
                     <button
                       onClick={() => handleUnhideHardHidden(conv.userId)}
-                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                      className="px-4 py-2 bg-green-600 dark:bg-green-500 text-white rounded-lg hover:bg-green-700 dark:hover:bg-green-600 transition-colors"
                     >
                       Unhide
                     </button>
@@ -519,21 +522,21 @@ export const Sidebar: React.FC = () => {
       {/* Logout Confirmation Dialog */}
       {showLogoutConfirm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4">
             <div className="p-6">
               <div className="flex items-center mb-4">
                 <div className="flex-shrink-0">
-                  <LogOut className="h-6 w-6 text-red-500" />
+                  <LogOut className="h-6 w-6 text-red-500 dark:text-red-400" />
                 </div>
                 <div className="ml-3">
-                  <h3 className="text-lg font-medium text-gray-900">
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-white">
                     Confirm Logout
                   </h3>
                 </div>
               </div>
               
               <div className="mb-6">
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-gray-500 dark:text-gray-400">
                   Are you sure you want to logout? You'll need to sign in again to access your chats.
                 </p>
               </div>
@@ -541,13 +544,13 @@ export const Sidebar: React.FC = () => {
               <div className="flex justify-end space-x-3">
                 <button
                   onClick={handleLogoutCancel}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500"
+                  className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-md hover:bg-gray-200 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-500"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleLogoutConfirm}
-                  className="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
+                  className="px-4 py-2 text-sm font-medium text-white bg-red-600 dark:bg-red-500 border border-transparent rounded-md hover:bg-red-700 dark:hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500"
                 >
                   Logout
                 </button>

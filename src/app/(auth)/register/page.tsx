@@ -90,15 +90,15 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-6">
         <div>
-          <h2 className="mt-6 text-center text-2xl md:text-3xl font-extrabold text-gray-900">
+          <h2 className="mt-6 text-center text-2xl md:text-3xl font-extrabold text-gray-900 dark:text-white">
             Create your account
           </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
+          <p className="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">
             Or{' '}
-            <Link href="/login" className="font-medium text-blue-600 hover:text-blue-500">
+            <Link href="/login" className="font-medium text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300">
               sign in to your existing account
             </Link>
           </p>
@@ -111,13 +111,13 @@ export default function RegisterPage() {
                 src={avatar}
                 alt="Profile Picture"
                 size="xl"
-                className="ring-4 ring-blue-100"
+                className="ring-4 ring-blue-100 dark:ring-blue-900/20"
               />
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isUploadingAvatar}
-                className="absolute -bottom-2 -right-2 bg-blue-600 text-white rounded-full p-1.5 md:p-2 shadow-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                className="absolute -bottom-2 -right-2 bg-blue-600 dark:bg-blue-500 text-white rounded-full p-1.5 md:p-2 shadow-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors disabled:opacity-50"
               >
                 {isUploadingAvatar ? (
                   <Loader2 size={14} className="animate-spin md:w-4 md:h-4" />
@@ -126,7 +126,7 @@ export default function RegisterPage() {
                 )}
               </button>
             </div>
-            <p className="text-xs md:text-sm text-gray-500 text-center">
+            <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400 text-center">
               {avatar ? 'Click to change photo' : 'Add a profile picture (optional)'}
             </p>
           </div>
@@ -192,7 +192,7 @@ export default function RegisterPage() {
           </div>
 
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 px-4 py-3 rounded-lg text-sm">
               {error}
             </div>
           )}

@@ -185,7 +185,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
     console.log('Rendering system message:', message);
     return (
       <div className="flex justify-center mb-3 md:mb-4">
-        <div className="bg-gray-200 text-gray-600 text-sm px-3 py-2 rounded-full max-w-xs text-center">
+        <div className="bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-sm px-3 py-2 rounded-full max-w-xs text-center">
           {message.text}
         </div>
       </div>
@@ -208,18 +208,18 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
         )}
         <div className={`${isOwn ? 'items-end' : 'items-start'} flex flex-col`}>
           {!isOwn && (
-            <span className="text-xs text-gray-500 mb-1">{senderName}</span>
+            <span className="text-xs text-gray-500 dark:text-gray-400 mb-1">{senderName}</span>
           )}
           <div
             className={`px-3 py-2 md:px-4 md:py-2 rounded-lg relative group message-bubble break-words overflow-wrap-anywhere ${
               isOwn
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-100 text-gray-900'
+                ? 'bg-blue-600 dark:bg-blue-500 text-white'
+                : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white'
             } ${
               isCurrentSearchResult 
-                ? 'ring-2 ring-yellow-400 bg-yellow-50' 
+                ? 'ring-2 ring-yellow-400 dark:ring-yellow-500 bg-yellow-50 dark:bg-yellow-900/20' 
                 : isSearchResult 
-                  ? 'bg-yellow-50' 
+                  ? 'bg-yellow-50 dark:bg-yellow-900/10' 
                   : ''
             }`}
             onTouchStart={handleLongPressStart}
@@ -247,8 +247,8 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
             {message.replyTo && (
               <div className={`mb-2 p-2 rounded border-l-2 ${
                 isOwn 
-                  ? 'bg-blue-500 bg-opacity-20 border-blue-400' 
-                  : 'bg-gray-200 border-gray-400'
+                  ? 'bg-blue-500 bg-opacity-20 dark:bg-blue-400 dark:bg-opacity-20 border-blue-400 dark:border-blue-300' 
+                  : 'bg-gray-200 dark:bg-gray-600 border-gray-400 dark:border-gray-500'
               }`}>
                 <div className="text-xs opacity-75 mb-1">
                   Replying to {message.replyTo.senderName}
@@ -265,8 +265,8 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
             {message.isForwarded && (
               <div className={`mb-2 p-2 rounded border-l-2 ${
                 isOwn 
-                  ? 'bg-purple-500 bg-opacity-20 border-purple-400' 
-                  : 'bg-gray-200 border-gray-400'
+                  ? 'bg-purple-500 bg-opacity-20 dark:bg-purple-400 dark:bg-opacity-20 border-purple-400 dark:border-purple-300' 
+                  : 'bg-gray-200 dark:bg-gray-600 border-gray-400 dark:border-gray-500'
               }`}>
                 <div className="text-xs opacity-75 mb-1 flex items-center break-words overflow-wrap-anywhere">
                   <Forward size={12} className="mr-1 flex-shrink-0" />
@@ -277,7 +277,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
             {/* Voice Message */}
             {!message.deleted && message.voiceUrl && (
               <div className="mb-2">
-                <div className="flex items-center space-x-3 p-3 bg-gray-100 rounded-lg">
+                <div className="flex items-center space-x-3 p-3 bg-gray-100 dark:bg-gray-600 rounded-lg">
                   <button
                     onClick={handleVoicePlay}
                     className="flex items-center justify-center w-10 h-10 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors"
@@ -286,10 +286,10 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                   </button>
                   <div className="flex-1">
                     <div className="flex items-center space-x-2">
-                      <Volume2 size={16} className="text-gray-600" />
-                      <span className="text-sm font-medium text-gray-700">Voice message</span>
+                      <Volume2 size={16} className="text-gray-600 dark:text-gray-400" />
+                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Voice message</span>
                     </div>
-                    <div className="text-xs text-gray-500">
+                    <div className="text-xs text-gray-500 dark:text-gray-400">
                       {message.voiceDuration ? formatDuration(message.voiceDuration) : '0:00'}
                     </div>
                   </div>

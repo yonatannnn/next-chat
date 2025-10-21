@@ -40,22 +40,22 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({ items, className = '
     <div className={`relative ${className}`} ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="p-1.5 md:p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+        className="p-1.5 md:p-2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
         title="More options"
       >
         <MoreVertical size={18} className="md:w-5 md:h-5" />
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-40 md:w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
+        <div className="absolute right-0 top-full mt-2 w-40 md:w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-2 z-50">
           {items.map((item) => (
             <button
               key={item.id}
               onClick={() => handleItemClick(item)}
-              className={`w-full flex items-center space-x-2 md:space-x-3 px-3 md:px-4 py-2 text-left hover:bg-gray-50 transition-colors ${
+              className={`w-full flex items-center space-x-2 md:space-x-3 px-3 md:px-4 py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${
                 item.variant === 'danger' 
-                  ? 'text-red-600 hover:text-red-700 hover:bg-red-50' 
-                  : 'text-gray-700 hover:text-gray-900'
+                  ? 'text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20' 
+                  : 'text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
               }`}
             >
               <div className="flex-shrink-0">

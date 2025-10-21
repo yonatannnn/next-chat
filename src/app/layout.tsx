@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { InstallPrompt } from "@/components/ui/InstallPrompt";
 import { ServiceWorkerRegistration } from "@/components/ui/ServiceWorkerRegistration";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -51,9 +52,11 @@ export default function RootLayout({
       <body
         className={`${inter.variable} antialiased`}
       >
-        {children}
-        <InstallPrompt />
-        <ServiceWorkerRegistration />
+        <ThemeProvider>
+          {children}
+          <InstallPrompt />
+          <ServiceWorkerRegistration />
+        </ThemeProvider>
       </body>
     </html>
   );
