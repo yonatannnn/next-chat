@@ -125,10 +125,10 @@ export default function ChatPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading user data...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400 mx-auto"></div>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">Loading user data...</p>
         </div>
       </div>
     );
@@ -139,9 +139,9 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="h-screen flex bg-gray-50 relative overflow-hidden">
+    <div className="h-screen flex bg-gray-50 dark:bg-gray-900 relative overflow-hidden">
       {/* Mobile Header */}
-      <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
+      <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center justify-between">
         {selectedUserId || selectedGroupId ? (
           // Chat mode: Show back button and chat info
           <>
@@ -154,7 +154,7 @@ export default function ChatPage() {
                 setSelectedUserId(null);
                 setSelectedGroupId(null);
               }}
-              className="p-2 text-gray-600 hover:text-gray-900"
+              className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
             >
               <X size={20} />
             </button>
@@ -221,7 +221,7 @@ export default function ChatPage() {
                   );
                 })()}
               </div>
-              <h1 className="text-lg font-semibold text-gray-900 truncate">
+              <h1 className="text-lg font-semibold text-gray-900 dark:text-white truncate">
                 {selectedUserId 
                   ? conversations.find(user => user.userId === selectedUserId)?.username || 'Chat'
                   : groupConversations.find(group => group.groupId === selectedGroupId)?.groupName || 'Group'
@@ -234,7 +234,7 @@ export default function ChatPage() {
                   console.log('Search button clicked on mobile');
                   setIsMobileSearchOpen(true);
                 }}
-                className="p-2 text-gray-600 hover:text-gray-900"
+                className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
                 title="Search Messages"
               >
                 <Search size={20} />
@@ -296,7 +296,7 @@ export default function ChatPage() {
           // Sidebar mode: Show title only (sidebar is always visible on mobile)
           <>
             <div className="w-8" /> {/* Spacer for centering */}
-            <h1 className="text-lg font-semibold text-gray-900">Chat</h1>
+            <h1 className="text-lg font-semibold text-gray-900 dark:text-white">Chat</h1>
             <div className="w-8" /> {/* Spacer for centering */}
           </>
         )}
@@ -304,7 +304,7 @@ export default function ChatPage() {
 
       {/* Sidebar - Mobile: Show by default, hide when chat selected */}
       <div className={`
-        fixed md:relative md:block z-40 w-80 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out
+        fixed md:relative md:block z-40 w-80 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 transform transition-transform duration-300 ease-in-out
         ${(selectedUserId || selectedGroupId) ? '-translate-x-full md:translate-x-0' : 'translate-x-0'}
         h-full md:h-screen
       `}>
@@ -344,23 +344,23 @@ export default function ChatPage() {
 
       {/* Hard Hide Confirmation Modal */}
       {showHardHideConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md mx-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 dark:bg-opacity-70 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md mx-4">
             <div className="flex items-center space-x-3 mb-4">
-              <div className="bg-red-100 p-2 rounded-full">
-                <AlertTriangle size={24} className="text-red-600" />
+              <div className="bg-red-100 dark:bg-red-900/20 p-2 rounded-full">
+                <AlertTriangle size={24} className="text-red-600 dark:text-red-400" />
               </div>
-              <h3 className="text-lg font-semibold text-gray-900">Hard Hide Chat</h3>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Hard Hide Chat</h3>
             </div>
             
             <div className="mb-6">
-              <p className="text-gray-600 mb-3">
+              <p className="text-gray-600 dark:text-gray-400 mb-3">
                 This will <strong>hard hide</strong> the conversation, removing it from both chat list and archived list.
               </p>
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+              <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
                 <div className="flex items-start space-x-2">
-                  <Lock size={16} className="text-yellow-600 mt-0.5 flex-shrink-0" />
-                  <div className="text-sm text-yellow-800">
+                  <Lock size={16} className="text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0" />
+                  <div className="text-sm text-yellow-800 dark:text-yellow-200">
                     <p className="font-medium mb-1">Warning:</p>
                     <ul className="list-disc list-inside space-y-1 text-xs">
                       <li>Chat will be completely removed from all lists</li>
@@ -375,13 +375,13 @@ export default function ChatPage() {
             <div className="flex space-x-3">
               <button
                 onClick={cancelHardHide}
-                className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                className="flex-1 px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-600 hover:bg-gray-200 dark:hover:bg-gray-500 rounded-lg transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={confirmHardHide}
-                className="flex-1 px-4 py-2 bg-red-600 text-white hover:bg-red-700 rounded-lg transition-colors"
+                className="flex-1 px-4 py-2 bg-red-600 dark:bg-red-500 text-white hover:bg-red-700 dark:hover:bg-red-600 rounded-lg transition-colors"
               >
                 Hard Hide
               </button>
