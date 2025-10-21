@@ -293,14 +293,9 @@ export default function ChatPage() {
             </div>
           </>
         ) : (
-          // Sidebar mode: Show menu button and title
+          // Sidebar mode: Show title only (sidebar is always visible on mobile)
           <>
-            <button
-              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className="p-2 text-gray-600 hover:text-gray-900"
-            >
-              <Menu size={20} />
-            </button>
+            <div className="w-8" /> {/* Spacer for centering */}
             <h1 className="text-lg font-semibold text-gray-900">Chat</h1>
             <div className="w-8" /> {/* Spacer for centering */}
           </>
@@ -310,7 +305,7 @@ export default function ChatPage() {
       {/* Sidebar - Mobile: Show by default, hide when chat selected */}
       <div className={`
         fixed md:relative md:block z-40 w-80 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out
-        ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+        ${(selectedUserId || selectedGroupId) ? '-translate-x-full md:translate-x-0' : 'translate-x-0'}
         h-full md:h-screen
       `}>
         <div className="h-full pt-16 md:pt-0 flex flex-col">
@@ -318,18 +313,12 @@ export default function ChatPage() {
         </div>
       </div>
 
-      {/* Overlay for mobile - only show when sidebar is open and no chat is selected */}
-      {isSidebarOpen && !selectedUserId && !selectedGroupId && (
-        <div 
-          className="md:hidden fixed inset-0 bg-black bg-opacity-50 z-30"
-          onClick={() => setIsSidebarOpen(false)}
-        />
-      )}
 
       {/* Chat Window - Mobile: Show when chat is selected, hide when sidebar is shown */}
       <div className={`
         flex-1 flex flex-col pt-16 md:pt-0 h-full md:h-screen overflow-hidden
         ${(selectedUserId || selectedGroupId) ? 'block' : 'hidden md:flex'}
+        ${(selectedUserId || selectedGroupId) ? 'fixed inset-0 md:relative md:inset-auto' : ''}
       `}>
         <ChatWindow 
           isMobileSearchOpen={isMobileSearchOpen}

@@ -226,7 +226,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   useEffect(() => {
     if (messagesEndRef.current) {
       // On initial load or when switching chats, scroll instantly to bottom (unless search is active)
-      if ((isInitialLoad || messages.length === 0) && !isSearchOpen) {
+      if (isInitialLoad && !isSearchOpen) {
         // Use direct scrollTop manipulation for better mobile compatibility
         const messagesContainer = document.querySelector('.messages-container');
         if (messagesContainer) {
@@ -296,6 +296,19 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       }
     }
   }, [selectedUserId, selectedGroupId, previousChatId, conversations, groupConversations, markAsSeen, markGroupAsSeen]);
+
+  // Additional effect to ensure scroll to bottom when switching chats
+  useEffect(() => {
+    if ((selectedUserId || selectedGroupId) && messages.length > 0 && !isSearchOpen) {
+      // Small delay to ensure DOM is updated
+      setTimeout(() => {
+        const messagesContainer = document.querySelector('.messages-container');
+        if (messagesContainer) {
+          messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+      }, 100);
+    }
+  }, [selectedUserId, selectedGroupId, messages.length, isSearchOpen]);
 
   // PWA visibility detection for message seen status
   useEffect(() => {
