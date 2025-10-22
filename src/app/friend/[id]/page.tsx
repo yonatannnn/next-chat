@@ -55,9 +55,9 @@ export default function FriendProfilePage() {
   // Format status color
   const getStatusColor = () => {
     if (isOnline) {
-      return 'text-green-600';
+      return 'text-green-600 dark:text-green-400';
     } else {
-      return 'text-gray-500';
+      return 'text-gray-500 dark:text-gray-400';
     }
   };
 
@@ -72,19 +72,19 @@ export default function FriendProfilePage() {
 
   if (!friend) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading profile...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400 mx-auto"></div>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">Loading profile...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200">
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-4xl mx-auto px-4 py-3 md:py-4">
           <div className="flex items-center space-x-3 md:space-x-4">
             <Button
@@ -96,13 +96,13 @@ export default function FriendProfilePage() {
               <ArrowLeft size={18} className="md:w-5 md:h-5" />
               <span className="text-sm md:text-base">Back</span>
             </Button>
-            <h1 className="text-xl md:text-2xl font-bold text-gray-900">Profile</h1>
+            <h1 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">Profile</h1>
           </div>
         </div>
       </div>
 
       <div className="max-w-4xl mx-auto px-4 py-6 md:py-8">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
           {/* Profile Header */}
           <div className="bg-gradient-to-r from-blue-500 to-purple-600 px-4 md:px-8 py-8 md:py-12">
             <div className="flex items-center space-x-4 md:space-x-6">
@@ -134,36 +134,36 @@ export default function FriendProfilePage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
               {/* Username */}
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Username
                 </label>
                 <div className="relative">
-                  <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50">
-                    <span className="text-gray-900">{friend.username}</span>
+                  <div className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700">
+                    <span className="text-gray-900 dark:text-gray-100">{friend.username}</span>
                   </div>
                 </div>
               </div>
 
               {/* Name */}
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Full Name
                 </label>
                 <div className="relative">
-                  <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50">
-                    <span className="text-gray-900">{friend.name || 'Not provided'}</span>
+                  <div className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700">
+                    <span className="text-gray-900 dark:text-gray-100">{friend.name || 'Not provided'}</span>
                   </div>
                 </div>
               </div>
 
               {/* Email */}
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Email Address
                 </label>
                 <div className="relative">
-                  <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50">
-                    <span className="text-gray-900">{friend.email}</span>
+                  <div className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700">
+                    <span className="text-gray-900 dark:text-gray-100">{friend.email}</span>
                   </div>
                 </div>
               </div>
@@ -171,32 +171,32 @@ export default function FriendProfilePage() {
 
             {/* Additional Info */}
             <div className="mt-6 md:mt-8 grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
-              <div className="bg-gray-50 rounded-lg p-3 md:p-4">
+              <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 md:p-4">
                 <div className="flex items-center space-x-3">
-                  <User size={18} className="text-gray-600 md:w-5 md:h-5" />
+                  <User size={18} className="text-gray-600 dark:text-gray-400 md:w-5 md:h-5" />
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-gray-900">Profile ID</p>
-                    <p className="text-xs text-gray-500 font-mono truncate">{friend.id}</p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Profile ID</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 font-mono truncate">{friend.id}</p>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-gray-50 rounded-lg p-3 md:p-4">
+              <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 md:p-4">
                 <div className="flex items-center space-x-3">
-                  <Calendar size={18} className="text-gray-600 md:w-5 md:h-5" />
+                  <Calendar size={18} className="text-gray-600 dark:text-gray-400 md:w-5 md:h-5" />
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-gray-900">Status</p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Status</p>
                     <p className={`text-xs ${getStatusColor()}`}>{getStatusText()}</p>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-gray-50 rounded-lg p-3 md:p-4">
+              <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 md:p-4">
                 <div className="flex items-center space-x-3">
-                  <CheckCircle size={18} className="text-green-600 md:w-5 md:h-5" />
+                  <CheckCircle size={18} className="text-green-600 dark:text-green-400 md:w-5 md:h-5" />
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-gray-900">Account Status</p>
-                    <p className="text-xs text-green-600">Verified</p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Account Status</p>
+                    <p className="text-xs text-green-600 dark:text-green-400">Verified</p>
                   </div>
                 </div>
               </div>
