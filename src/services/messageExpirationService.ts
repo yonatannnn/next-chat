@@ -133,6 +133,10 @@ export class MessageExpirationService {
           // and delete the actual file from storage
           if (messageData.fileUrl || messageData.fileUrls) {
             // Mark as expired instead of deleting
+            if (!db) {
+              console.error('Firestore database not initialized');
+              return;
+            }
             await updateDoc(doc(db, 'messages', messageDoc.id), {
               isExpired: true,
               text: 'This message has expired',
@@ -144,6 +148,10 @@ export class MessageExpirationService {
             console.log(`✅ Marked message ${messageDoc.id} as expired (had files)`);
           } else {
             // For text-only messages, delete completely
+            if (!db) {
+              console.error('Firestore database not initialized');
+              return;
+            }
             await deleteDoc(doc(db, 'messages', messageDoc.id));
             console.log(`✅ Deleted expired message ${messageDoc.id}`);
           }
@@ -163,6 +171,10 @@ export class MessageExpirationService {
           // and delete the actual file from storage
           if (messageData.fileUrl || messageData.fileUrls) {
             // Mark as expired instead of deleting
+            if (!db) {
+              console.error('Firestore database not initialized');
+              return;
+            }
             await updateDoc(doc(db, 'groupMessages', messageDoc.id), {
               isExpired: true,
               text: 'This message has expired',
@@ -174,6 +186,10 @@ export class MessageExpirationService {
             console.log(`✅ Marked group message ${messageDoc.id} as expired (had files)`);
           } else {
             // For text-only messages, delete completely
+            if (!db) {
+              console.error('Firestore database not initialized');
+              return;
+            }
             await deleteDoc(doc(db, 'groupMessages', messageDoc.id));
             console.log(`✅ Deleted expired group message ${messageDoc.id}`);
           }
@@ -227,6 +243,10 @@ export class MessageExpirationService {
       // Process old file messages
       const updatePromises = oldFileMessages.map(async (messageDoc) => {
         try {
+          if (!db) {
+            console.error('Firestore database not initialized');
+            return;
+          }
           await updateDoc(doc(db, 'messages', messageDoc.id), {
             fileUrl: null,
             fileUrls: null,
