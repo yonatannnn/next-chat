@@ -16,6 +16,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Message, Group, GroupMember, GroupConversation } from '../store/chatStore';
+import { conversationSettingsService } from '@/services/conversationSettingsService';
 
 export const groupChatService = {
   async createGroup(
@@ -82,13 +83,22 @@ export const groupChatService = {
     replyTo?: any, 
     voiceUrl?: string, 
     voiceDuration?: number,
-    messageType?: 'system'
+    messageType?: 'system' | 'user',
+    expirationMinutes?: number | null
   ) {
     if (!db) {
       throw new Error('Firebase not initialized');
     }
     
     try {
+      // Calculate expiration time if specified
+      let expiresAt = null;
+      if (expirationMinutes && expirationMinutes > 0) {
+        const expirationTime = new Date();
+        expirationTime.setMinutes(expirationTime.getMinutes() + expirationMinutes);
+        expiresAt = expirationTime;
+      }
+
       const messageData = {
         groupId,
         senderId: messageType === 'system' ? 'system' : senderId,
@@ -104,6 +114,9 @@ export const groupChatService = {
         voiceUrl: voiceUrl || null,
         voiceDuration: voiceDuration || null,
         messageType: messageType || 'user',
+        expiresAt: expiresAt,
+        expirationMinutes: expirationMinutes || null,
+        isExpired: false,
       };
       
       await addDoc(collection(db, 'groupMessages'), messageData);
@@ -151,6 +164,9 @@ export const groupChatService = {
           voiceDuration: data.voiceDuration || null,
           seen: data.seen || false,
           seenAt: data.seenAt?.toDate(),
+          expiresAt: data.expiresAt?.toDate() || null,
+          expirationMinutes: data.expirationMinutes || null,
+          isExpired: data.isExpired || false,
         };
       });
       callback(messages);
@@ -342,6 +358,17 @@ export const groupChatService = {
           return data.senderId !== userId && !data.seen;
         }).length;
         
+        // Load expiration settings for this group
+        let expirationMinutes: number | null = null;
+        try {
+          expirationMinutes = await conversationSettingsService.getGroupExpiration(
+            userId, 
+            groupId
+          );
+        } catch (error) {
+          console.error('Error loading expiration settings for group:', groupId, error);
+        }
+        
         conversations.push({
           id: groupId,
           groupId,
@@ -352,7 +379,8 @@ export const groupChatService = {
           lastMessageSeen: unreadCount === 0,
           unreadCount,
           memberCount: groupData.members?.length || 0,
-          isActive: groupData.isActive
+          isActive: groupData.isActive,
+          expirationMinutes
         });
       }
       

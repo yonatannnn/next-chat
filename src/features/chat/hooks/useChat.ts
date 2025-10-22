@@ -10,7 +10,8 @@ export const useChat = (currentUserId: string, selectedUserId: string | null) =>
     deleteMessage,
     deleteAllMessages,
     setLoading, 
-    setError 
+    setError,
+    conversations
   } = useChatStore();
   
   const lastEditTime = useRef<number>(0);
@@ -40,7 +41,13 @@ export const useChat = (currentUserId: string, selectedUserId: string | null) =>
     if (!selectedUserId) return;
     
     try {
-      await chatService.sendMessage(currentUserId, selectedUserId, text, fileUrl, fileUrls, replyTo, voiceUrl, voiceDuration, messageType, senderName);
+      // Get expiration setting for this conversation
+      const conversation = conversations.find(conv => conv.userId === selectedUserId);
+      const expirationMinutes = conversation?.expirationMinutes || null;
+      
+      console.log(`Sending message to ${selectedUserId} with expiration: ${expirationMinutes} minutes`);
+      
+      await chatService.sendMessage(currentUserId, selectedUserId, text, fileUrl, fileUrls, replyTo, voiceUrl, voiceDuration, messageType, senderName, expirationMinutes);
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : 'An error occurred');
     }
@@ -148,7 +155,12 @@ export const useChat = (currentUserId: string, selectedUserId: string | null) =>
     setError(null);
     try {
       const { url, duration } = await chatService.uploadVoiceMessage(audioBlob);
-      await chatService.sendMessage(currentUserId, selectedUserId, '', undefined, undefined, replyTo, url, duration);
+      
+      // Get expiration setting for this conversation
+      const conversation = conversations.find(conv => conv.userId === selectedUserId);
+      const expirationMinutes = conversation?.expirationMinutes || null;
+      
+      await chatService.sendMessage(currentUserId, selectedUserId, '', undefined, undefined, replyTo, url, duration, 'user', undefined, expirationMinutes);
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : 'An error occurred');
     } finally {

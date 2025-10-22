@@ -25,6 +25,10 @@ export interface Message {
   voiceDuration?: number | null;
   seen?: boolean;
   seenAt?: Date;
+  // Message expiration fields
+  expiresAt?: Date | null;
+  expirationMinutes?: number | null;
+  isExpired?: boolean;
 }
 
 export interface Conversation {
@@ -40,6 +44,7 @@ export interface Conversation {
   isOnline?: boolean;
   hidden?: boolean;
   hardHidden?: boolean;
+  expirationMinutes?: number | null;
 }
 
 export interface Group {
@@ -74,6 +79,7 @@ export interface GroupConversation {
   unreadCount: number;
   memberCount: number;
   isActive: boolean;
+  expirationMinutes?: number | null;
 }
 
 interface ChatState {
@@ -116,6 +122,10 @@ interface ChatState {
   unhideConversation: (userId: string) => void;
   hardHideConversation: (userId: string) => void;
   unhideHardHiddenConversation: (userId: string) => void;
+  setConversationExpiration: (userId: string, expirationMinutes: number | null) => void;
+  setGroupConversationExpiration: (groupId: string, expirationMinutes: number | null) => void;
+  clearConversationExpiration: (userId: string) => void;
+  clearGroupConversationExpiration: (groupId: string) => void;
 }
 
 export const useChatStore = create<ChatState>((set) => ({
@@ -280,6 +290,26 @@ export const useChatStore = create<ChatState>((set) => ({
   unhideHardHiddenConversation: (userId) => set((state) => ({
     conversations: state.conversations.map(conv => 
       conv.userId === userId ? { ...conv, hardHidden: false, hidden: false } : conv
+    )
+  })),
+  setConversationExpiration: (userId, expirationMinutes) => set((state) => ({
+    conversations: state.conversations.map(conv => 
+      conv.userId === userId ? { ...conv, expirationMinutes } : conv
+    )
+  })),
+  setGroupConversationExpiration: (groupId, expirationMinutes) => set((state) => ({
+    groupConversations: state.groupConversations.map(conv => 
+      conv.groupId === groupId ? { ...conv, expirationMinutes } : conv
+    )
+  })),
+  clearConversationExpiration: (userId) => set((state) => ({
+    conversations: state.conversations.map(conv => 
+      conv.userId === userId ? { ...conv, expirationMinutes: null } : conv
+    )
+  })),
+  clearGroupConversationExpiration: (groupId) => set((state) => ({
+    groupConversations: state.groupConversations.map(conv => 
+      conv.groupId === groupId ? { ...conv, expirationMinutes: null } : conv
     )
   })),
 }));

@@ -17,8 +17,11 @@ import { supabase } from '@/lib/supabase';
 import { ForwardMessageModal } from '@/components/ui/ForwardMessageModal';
 import { AddMembersModal } from '@/components/ui/AddMembersModal';
 import { ProfileRecommendationBubble } from '@/components/ui/ProfileRecommendationBubble';
+import { MessageExpirationInput } from '@/components/ui/MessageExpirationInput';
 import { useRecommendations } from '@/features/profile/hooks/useRecommendations';
-import { Trash2, Info, Users, Search, X, ChevronUp, ChevronDown, EyeOff, Lock, AlertTriangle } from 'lucide-react';
+import { conversationSettingsService } from '@/services/conversationSettingsService';
+import { messageExpirationService } from '@/services/messageExpirationService';
+import { Trash2, Info, Users, Search, X, ChevronUp, ChevronDown, EyeOff, Lock, AlertTriangle, Clock } from 'lucide-react';
 
 interface ChatWindowProps {
   isMobileSearchOpen?: boolean;
@@ -30,7 +33,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   setIsMobileSearchOpen 
 }) => {
   const router = useRouter();
-  const { selectedUserId, selectedGroupId, messages, conversations, groupConversations, setSelectedUserId, setSelectedGroupId, replyingTo, setReplyingTo, forwardingMessage, setForwardingMessage, markMessageAsSeen, updateConversation, updateGroupConversation, hideConversation, hardHideConversation } = useChatStore();
+  const { selectedUserId, selectedGroupId, messages, conversations, groupConversations, setSelectedUserId, setSelectedGroupId, replyingTo, setReplyingTo, forwardingMessage, setForwardingMessage, markMessageAsSeen, updateConversation, updateGroupConversation, hideConversation, hardHideConversation, setConversationExpiration, setGroupConversationExpiration } = useChatStore();
   const { userData } = useAuthStore();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { markAsRead, markAsSeen } = useConversations(userData?.id || '');
@@ -49,6 +52,113 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   const [processingRecommendation, setProcessingRecommendation] = useState<string | null>(null);
   const [showHardHideConfirm, setShowHardHideConfirm] = useState(false);
   const [isAtBottom, setIsAtBottom] = useState(true);
+  const [isExpirationSelectorOpen, setIsExpirationSelectorOpen] = useState(false);
+  const [currentExpiration, setCurrentExpiration] = useState<number | null>(null);
+
+  // Helper function to format expiration time
+  const formatExpirationTime = (minutes: number): string => {
+    if (minutes < 60) {
+      return `${minutes}m`;
+    } else if (minutes < 1440) {
+      const hours = Math.floor(minutes / 60);
+      return `${hours}h`;
+    } else {
+      const days = Math.floor(minutes / 1440);
+      return `${days}d`;
+    }
+  };
+
+  // Get current expiration setting when opening selector
+  useEffect(() => {
+    const loadExpirationSettings = async () => {
+      if (isExpirationSelectorOpen && userData?.id) {
+        if (selectedUserId) {
+          // First try to get from local state
+          const conversation = conversations.find(conv => conv.userId === selectedUserId);
+          let expiration = conversation?.expirationMinutes || null;
+          
+          // If not found in local state, try to load from database
+          if (expiration === null) {
+            try {
+              expiration = await conversationSettingsService.getConversationExpiration(
+                userData.id, 
+                selectedUserId
+              );
+              // Update local state with database value
+              if (expiration !== null) {
+                setConversationExpiration(selectedUserId, expiration);
+              }
+            } catch (error) {
+              console.error('Error loading conversation expiration from database:', error);
+            }
+          }
+          
+          console.log(`Getting expiration for user ${selectedUserId}: ${expiration} minutes`);
+          setCurrentExpiration(expiration);
+        } else if (selectedGroupId) {
+          // First try to get from local state
+          const groupConversation = groupConversations.find(conv => conv.groupId === selectedGroupId);
+          let expiration = groupConversation?.expirationMinutes || null;
+          
+          // If not found in local state, try to load from database
+          if (expiration === null) {
+            try {
+              expiration = await conversationSettingsService.getGroupExpiration(
+                userData.id, 
+                selectedGroupId
+              );
+              // Update local state with database value
+              if (expiration !== null) {
+                setGroupConversationExpiration(selectedGroupId, expiration);
+              }
+            } catch (error) {
+              console.error('Error loading group expiration from database:', error);
+            }
+          }
+          
+          console.log(`Getting expiration for group ${selectedGroupId}: ${expiration} minutes`);
+          setCurrentExpiration(expiration);
+        }
+      }
+    };
+
+    loadExpirationSettings();
+  }, [isExpirationSelectorOpen, selectedUserId, selectedGroupId, conversations, groupConversations, userData?.id, setConversationExpiration, setGroupConversationExpiration]);
+
+  // Load expiration settings when chat is selected
+  useEffect(() => {
+    const loadChatExpirationSettings = async () => {
+      if (userData?.id && (selectedUserId || selectedGroupId)) {
+        if (selectedUserId) {
+          try {
+            const expiration = await conversationSettingsService.getConversationExpiration(
+              userData.id, 
+              selectedUserId
+            );
+            if (expiration !== null) {
+              setConversationExpiration(selectedUserId, expiration);
+            }
+          } catch (error) {
+            console.error('Error loading conversation expiration on chat select:', error);
+          }
+        } else if (selectedGroupId) {
+          try {
+            const expiration = await conversationSettingsService.getGroupExpiration(
+              userData.id, 
+              selectedGroupId
+            );
+            if (expiration !== null) {
+              setGroupConversationExpiration(selectedGroupId, expiration);
+            }
+          } catch (error) {
+            console.error('Error loading group expiration on chat select:', error);
+          }
+        }
+      }
+    };
+
+    loadChatExpirationSettings();
+  }, [selectedUserId, selectedGroupId, userData?.id, setConversationExpiration, setGroupConversationExpiration]);
 
   // Handle mobile search state
   useEffect(() => {
@@ -646,12 +756,83 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     }
   };
 
+  const handleExpirationSelect = async (minutes: number | null) => {
+    setCurrentExpiration(minutes);
+    
+    // Store the expiration setting for this chat
+    if (selectedUserId && userData?.id) {
+      console.log(`Setting expiration for user ${selectedUserId}: ${minutes} minutes`);
+      setConversationExpiration(selectedUserId, minutes);
+      
+      // Persist to database
+      try {
+        await conversationSettingsService.saveConversationExpiration(
+          userData.id, 
+          selectedUserId, 
+          minutes
+        );
+      } catch (error) {
+        console.error('Error saving conversation expiration settings:', error);
+      }
+    } else if (selectedGroupId && userData?.id) {
+      console.log(`Setting expiration for group ${selectedGroupId}: ${minutes} minutes`);
+      setGroupConversationExpiration(selectedGroupId, minutes);
+      
+      // Persist to database
+      try {
+        await conversationSettingsService.saveGroupExpiration(
+          userData.id, 
+          selectedGroupId, 
+          minutes
+        );
+      } catch (error) {
+        console.error('Error saving group expiration settings:', error);
+      }
+    }
+  };
+
+  const handleTestExpirationCleanup = async () => {
+    try {
+      console.log('🧪 Testing expiration cleanup...');
+      await messageExpirationService.triggerCleanup();
+    } catch (error) {
+      console.error('Error testing expiration cleanup:', error);
+    }
+  };
+
+  const handleDebugExpirationMessages = async () => {
+    try {
+      console.log('🔍 Debugging expiration messages...');
+      await messageExpirationService.debugExpirationMessages();
+    } catch (error) {
+      console.error('Error debugging expiration messages:', error);
+    }
+  };
+
   const dropdownItems = [
     {
       id: 'search',
       label: 'Search Messages',
       icon: <Search size={16} />,
       onClick: () => setIsSearchOpen(true),
+    },
+    {
+      id: 'expiration',
+      label: 'Message Expiration',
+      icon: <Clock size={16} />,
+      onClick: () => setIsExpirationSelectorOpen(true),
+    },
+    {
+      id: 'test-cleanup',
+      label: 'Test Expiration Cleanup',
+      icon: <Trash2 size={16} />,
+      onClick: handleTestExpirationCleanup,
+    },
+    {
+      id: 'debug-expiration',
+      label: 'Debug Expiration Messages',
+      icon: <Clock size={16} />,
+      onClick: handleDebugExpirationMessages,
     },
     {
       id: 'chat-info',
@@ -733,11 +914,25 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
               <h3 className="font-semibold text-gray-900 dark:text-white text-sm md:text-base truncate">
                 {isGroupChat ? selectedGroup?.groupName : selectedUser?.username}
               </h3>
-              {isGroupChat && selectedGroup && (
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  {selectedGroup.memberCount} member{selectedGroup.memberCount !== 1 ? 's' : ''}
-                </p>
-              )}
+              <div className="flex items-center space-x-2">
+                {isGroupChat && selectedGroup && (
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    {selectedGroup.memberCount} member{selectedGroup.memberCount !== 1 ? 's' : ''}
+                  </p>
+                )}
+                {((selectedUser?.expirationMinutes && selectedUser.expirationMinutes > 0) || 
+                  (selectedGroup?.expirationMinutes && selectedGroup.expirationMinutes > 0)) && (
+                  <div className="flex items-center space-x-1">
+                    <Clock size={12} className="text-orange-500" />
+                    <span className="text-xs text-orange-600 dark:text-orange-400">
+                      {isGroupChat 
+                        ? formatExpirationTime(selectedGroup?.expirationMinutes || 0)
+                        : formatExpirationTime(selectedUser?.expirationMinutes || 0)
+                      }
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
           <div className="flex-shrink-0 ml-4">
@@ -980,6 +1175,14 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           </div>
         </div>
       )}
+
+      {/* Message Expiration Input Modal */}
+      <MessageExpirationInput
+        isOpen={isExpirationSelectorOpen}
+        onClose={() => setIsExpirationSelectorOpen(false)}
+        onSaveExpiration={handleExpirationSelect}
+        currentExpiration={currentExpiration}
+      />
     </div>
   );
 };

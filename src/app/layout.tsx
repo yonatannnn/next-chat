@@ -4,6 +4,7 @@ import "./globals.css";
 import { InstallPrompt } from "@/components/ui/InstallPrompt";
 import { ServiceWorkerRegistration } from "@/components/ui/ServiceWorkerRegistration";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import { MessageExpirationInitializer } from "@/components/ui/MessageExpirationInitializer";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -52,11 +53,12 @@ export default function RootLayout({
       <body
         className={`${inter.variable} antialiased`}
       >
-        <ThemeProvider>
-          {children}
-          <InstallPrompt />
-          <ServiceWorkerRegistration />
-        </ThemeProvider>
+            <ThemeProvider>
+              {children}
+              <InstallPrompt />
+              <ServiceWorkerRegistration />
+              <MessageExpirationInitializer />
+            </ThemeProvider>
       </body>
     </html>
   );

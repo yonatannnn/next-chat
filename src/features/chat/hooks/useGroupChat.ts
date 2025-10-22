@@ -9,7 +9,8 @@ export const useGroupChat = (currentUserId: string, selectedGroupId: string | nu
     updateMessage,
     deleteMessage: deleteMessageFromStore,
     setLoading, 
-    setError 
+    setError,
+    groupConversations
   } = useChatStore();
   
   const lastEditTime = useRef<number>(0);
@@ -46,6 +47,12 @@ export const useGroupChat = (currentUserId: string, selectedGroupId: string | nu
     if (!selectedGroupId) return;
     
     try {
+      // Get expiration setting for this group conversation
+      const groupConversation = groupConversations.find(conv => conv.groupId === selectedGroupId);
+      const expirationMinutes = groupConversation?.expirationMinutes || null;
+      
+      console.log(`Sending group message to ${selectedGroupId} with expiration: ${expirationMinutes} minutes`);
+      
       await groupChatService.sendGroupMessage(
         selectedGroupId, 
         currentUserId, 
@@ -55,7 +62,8 @@ export const useGroupChat = (currentUserId: string, selectedGroupId: string | nu
         replyTo, 
         voiceUrl, 
         voiceDuration,
-        messageType
+        messageType,
+        expirationMinutes
       );
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : 'An error occurred');
@@ -101,9 +109,27 @@ export const useGroupChat = (currentUserId: string, selectedGroupId: string | nu
   };
 
   const sendVoiceMessage = async (audioBlob: Blob, replyTo?: Message) => {
+    if (!selectedGroupId) return;
+    
     try {
       const { url, duration } = await groupChatService.uploadVoiceMessage(audioBlob);
-      await sendMessage('', undefined, undefined, replyTo, url, duration);
+      
+      // Get expiration setting for this group conversation
+      const groupConversation = groupConversations.find(conv => conv.groupId === selectedGroupId);
+      const expirationMinutes = groupConversation?.expirationMinutes || null;
+      
+      await groupChatService.sendGroupMessage(
+        selectedGroupId, 
+        currentUserId, 
+        '', 
+        undefined, 
+        undefined, 
+        replyTo, 
+        url, 
+        duration,
+        'user',
+        expirationMinutes
+      );
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : 'An error occurred');
     }

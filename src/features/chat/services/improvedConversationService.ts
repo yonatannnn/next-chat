@@ -11,6 +11,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Conversation } from '../store/chatStore';
+import { conversationSettingsService } from '@/services/conversationSettingsService';
 
 export const improvedConversationService = {
   subscribeToConversations(currentUserId: string, callback: (conversations: Conversation[]) => void) {
@@ -143,6 +144,17 @@ export const improvedConversationService = {
               }
             }
             
+            // Load expiration settings for this conversation
+            let expirationMinutes: number | null = null;
+            try {
+              expirationMinutes = await conversationSettingsService.getConversationExpiration(
+                currentUserId, 
+                userId
+              );
+            } catch (error) {
+              console.error('Error loading expiration settings for conversation:', userId, error);
+            }
+
             const conversation: Conversation = {
               id: userId,
               userId: userId,
@@ -153,7 +165,8 @@ export const improvedConversationService = {
               lastMessageTime: lastMessageTime,
               lastMessageSeen: lastMessageData?.seen || false,
               unreadCount: isLastMessageToMe ? 1 : 0, // Use 1 for bold, 0 for normal
-              isOnline: true
+              isOnline: true,
+              expirationMinutes
             };
             
             conversationsMap.set(userId, conversation);

@@ -4,7 +4,7 @@ import { Avatar } from '@/components/ui/Avatar';
 import { ImageViewer } from '@/components/ui/ImageViewer';
 import { LinkifiedText } from '@/components/ui/LinkifiedText';
 import { Message } from '@/features/chat/store/chatStore';
-import { Edit2, Trash2, Check, X, Reply, Forward, Play, Pause, Volume2 } from 'lucide-react';
+import { Edit2, Trash2, Check, X, Reply, Forward, Play, Pause, Volume2, Clock, Shield } from 'lucide-react';
 
 interface MessageBubbleProps {
   message: Message;
@@ -467,6 +467,24 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
             <span className="text-xs text-gray-500">
               {formatTime(message.timestamp)}
             </span>
+            {/* Expiration indicator */}
+            {message.expirationMinutes && message.expirationMinutes > 0 && (
+              <div className="flex items-center space-x-1">
+                <Clock size={12} className="text-orange-500 dark:text-orange-400" />
+                <span className="text-xs text-orange-600 dark:text-orange-400" title={`Expires in ${message.expirationMinutes} minutes`}>
+                  {message.expirationMinutes}m
+                </span>
+              </div>
+            )}
+            {/* Expired message indicator */}
+            {message.isExpired && (
+              <div className="flex items-center space-x-1">
+                <Shield size={12} className="text-red-500 dark:text-red-400" />
+                <span className="text-xs text-red-600 dark:text-red-400" title="This message has expired">
+                  Expired
+                </span>
+              </div>
+            )}
             {isOwn && message.seen && (
               <span className="text-xs text-blue-500" title={`Seen at ${message.seenAt ? formatTime(message.seenAt) : 'Unknown time'}`}>
                 ✓✓

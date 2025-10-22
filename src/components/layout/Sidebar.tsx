@@ -9,7 +9,7 @@ import { useAuthStore } from '@/features/auth/store/authStore';
 import { useConversations } from '@/features/chat/hooks/useConversations';
 import { useGroupConversations } from '@/features/chat/hooks/useGroupConversations';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
-import { LogOut, MessageCircle, Settings, Search, X, Bell, Users, Plus, Eye, EyeOff, Archive, AlertTriangle, Lock } from 'lucide-react';
+import { LogOut, MessageCircle, Settings, Search, X, Bell, Users, Plus, Eye, EyeOff, Archive, AlertTriangle, Lock, Clock } from 'lucide-react';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { useTheme } from '@/contexts/ThemeContext';
 
@@ -383,11 +383,20 @@ export const Sidebar: React.FC = () => {
                         </p>
                       )}
                     </div>
-                      {isGroup ? (
-                        <Users size={14} className="text-gray-400 dark:text-gray-500 flex-shrink-0 md:w-4 md:h-4" />
-                      ) : (
-                        <MessageCircle size={14} className="text-gray-400 dark:text-gray-500 flex-shrink-0 md:w-4 md:h-4" />
-                      )}
+                      <div className="flex items-center space-x-1">
+                        {/* Expiration indicator */}
+                        {((!isGroup && item.expirationMinutes && item.expirationMinutes > 0) || 
+                          (isGroup && item.expirationMinutes && item.expirationMinutes > 0)) && (
+                          <div title={`Messages expire after ${item.expirationMinutes} minutes`}>
+                            <Clock size={12} className="text-orange-500 dark:text-orange-400" />
+                          </div>
+                        )}
+                        {isGroup ? (
+                          <Users size={14} className="text-gray-400 dark:text-gray-500 flex-shrink-0 md:w-4 md:h-4" />
+                        ) : (
+                          <MessageCircle size={14} className="text-gray-400 dark:text-gray-500 flex-shrink-0 md:w-4 md:h-4" />
+                        )}
+                      </div>
                     </button>
                     
                   </div>

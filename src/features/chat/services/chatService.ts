@@ -18,12 +18,20 @@ import { Message } from '../store/chatStore';
 import { pushNotificationService } from '@/services/pushNotificationService';
 
 export const chatService = {
-  async sendMessage(senderId: string, receiverId: string, text: string, fileUrl?: string, fileUrls?: string[], replyTo?: any, voiceUrl?: string, voiceDuration?: number, messageType?: 'system', senderName?: string) {
+  async sendMessage(senderId: string, receiverId: string, text: string, fileUrl?: string, fileUrls?: string[], replyTo?: any, voiceUrl?: string, voiceDuration?: number, messageType?: 'system' | 'user', senderName?: string, expirationMinutes?: number | null) {
     if (!db) {
       throw new Error('Firebase not initialized');
     }
     
     try {
+      // Calculate expiration time if specified
+      let expiresAt = null;
+      if (expirationMinutes && expirationMinutes > 0) {
+        const expirationTime = new Date();
+        expirationTime.setMinutes(expirationTime.getMinutes() + expirationMinutes);
+        expiresAt = expirationTime;
+      }
+
       const messageData = {
         senderId: messageType === 'system' ? 'system' : senderId,
         receiverId,
@@ -39,6 +47,9 @@ export const chatService = {
         voiceUrl: voiceUrl || null,
         voiceDuration: voiceDuration || null,
         messageType: messageType || 'user',
+        expiresAt: expiresAt,
+        expirationMinutes: expirationMinutes || null,
+        isExpired: false,
       };
       
       await addDoc(collection(db, 'messages'), messageData);
@@ -115,6 +126,9 @@ export const chatService = {
             voiceDuration: data.voiceDuration || null,
             seen: data.seen || false,
             seenAt: data.seenAt?.toDate(),
+            expiresAt: data.expiresAt?.toDate() || null,
+            expirationMinutes: data.expirationMinutes || null,
+            isExpired: data.isExpired || false,
           };
         });
       callback(messages);
