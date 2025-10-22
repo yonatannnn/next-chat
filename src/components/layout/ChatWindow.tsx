@@ -26,11 +26,13 @@ import { Trash2, Info, Users, Search, X, ChevronUp, ChevronDown, EyeOff, Lock, A
 interface ChatWindowProps {
   isMobileSearchOpen?: boolean;
   setIsMobileSearchOpen?: (open: boolean) => void;
+  onExpirationDialogTrigger?: () => void;
 }
 
 export const ChatWindow: React.FC<ChatWindowProps> = ({ 
   isMobileSearchOpen = false, 
-  setIsMobileSearchOpen 
+  setIsMobileSearchOpen,
+  onExpirationDialogTrigger
 }) => {
   const router = useRouter();
   const { selectedUserId, selectedGroupId, messages, conversations, groupConversations, setSelectedUserId, setSelectedGroupId, replyingTo, setReplyingTo, forwardingMessage, setForwardingMessage, markMessageAsSeen, updateConversation, updateGroupConversation, hideConversation, hardHideConversation, setConversationExpiration, setGroupConversationExpiration } = useChatStore();
@@ -167,6 +169,16 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       setIsMobileSearchOpen(false); // Reset mobile state
     }
   }, [isMobileSearchOpen, setIsMobileSearchOpen]);
+
+  // Handle mobile expiration dialog trigger
+  useEffect(() => {
+    if (onExpirationDialogTrigger) {
+      // Create a global function that can be called from the parent
+      (window as any).triggerExpirationDialog = () => {
+        setIsExpirationSelectorOpen(true);
+      };
+    }
+  }, [onExpirationDialogTrigger]);
 
   // Track if user has manually scrolled away from bottom
   const [userHasScrolledUp, setUserHasScrolledUp] = useState(false);

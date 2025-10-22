@@ -14,7 +14,7 @@ import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { DropdownMenu } from '@/components/ui/DropdownMenu';
 import { Avatar } from '@/components/ui/Avatar';
 import { ChatInfoModal } from '@/components/ui/ChatInfoModal';
-import { Menu, X, Info, Users, Trash2, Search, EyeOff, Lock, AlertTriangle } from 'lucide-react';
+import { Menu, X, Info, Users, Trash2, Search, EyeOff, Lock, AlertTriangle, Clock } from 'lucide-react';
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
@@ -249,6 +249,18 @@ export default function ChatPage() {
                     setIsChatInfoOpen(true);
                   },
                 },
+                {
+                  id: 'message-expiration',
+                  label: 'Message Expiration',
+                  icon: <Clock size={16} />,
+                  onClick: () => {
+                    console.log('Message expiration clicked');
+                    // Trigger the expiration dialog from ChatWindow
+                    if ((window as any).triggerExpirationDialog) {
+                      (window as any).triggerExpirationDialog();
+                    }
+                  },
+                },
                 ...(selectedGroupId ? [
                   {
                     id: 'add-members',
@@ -323,6 +335,7 @@ export default function ChatPage() {
         <ChatWindow 
           isMobileSearchOpen={isMobileSearchOpen}
           setIsMobileSearchOpen={setIsMobileSearchOpen}
+          onExpirationDialogTrigger={() => {}}
         />
       </div>
 

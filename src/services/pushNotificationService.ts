@@ -264,6 +264,18 @@ class PushNotificationService {
         try {
           console.log(`🔔 FCM DEBUG: Sending to device ${subscription.deviceId} with token: ${subscription.endpoint?.substring(0, 20)}...`);
           
+          // Validate token before sending
+          if (!subscription.endpoint || subscription.endpoint.length < 100) {
+            console.error(`🔔 FCM DEBUG: Invalid token for device ${subscription.deviceId}:`, subscription.endpoint);
+            return;
+          }
+
+          // Check if token looks like a device ID instead of FCM token
+          if (subscription.endpoint.startsWith('flutter_') || subscription.endpoint.includes('device')) {
+            console.error(`🔔 FCM DEBUG: Device ${subscription.deviceId} has device ID instead of FCM token:`, subscription.endpoint);
+            return;
+          }
+          
           // Send FCM notification using the server API
           const response = await fetch('/api/fcm-notification', {
             method: 'POST',
@@ -286,6 +298,12 @@ class PushNotificationService {
             console.log(`🔔 FCM DEBUG: FCM notification sent to device ${subscription.deviceId}`);
           } else {
             console.error(`🔔 FCM DEBUG: Failed to send FCM notification to device ${subscription.deviceId}:`, response.statusText, responseText);
+            
+            // If token is invalid, we might want to remove it from the database
+            if (response.status === 400 && responseText.includes('Invalid FCM token')) {
+              console.log(`🔔 FCM DEBUG: Removing invalid token for device ${subscription.deviceId}`);
+              // TODO: Remove invalid token from database
+            }
           }
         } catch (error) {
           console.error(`🔔 FCM DEBUG: Error sending FCM notification to device ${subscription.deviceId}:`, error);

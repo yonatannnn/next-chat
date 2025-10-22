@@ -30,8 +30,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Missing required fields: token, title, body' });
     }
 
+    // Validate FCM token format
+    if (typeof token !== 'string' || token.length < 100) {
+      console.error('❌ FCM API: Invalid token format - too short or not a string');
+      return res.status(400).json({ 
+        error: 'Invalid FCM token format',
+        details: 'Token must be a string with at least 100 characters'
+      });
+    }
+
+    // Check if token looks like a device ID instead of FCM token
+    if (token.startsWith('flutter_') || token.includes('device') || token.length < 150) {
+      console.error('❌ FCM API: Token appears to be a device ID, not an FCM token');
+      console.error('   Token received:', token);
+      return res.status(400).json({ 
+        error: 'Invalid FCM token - appears to be a device ID',
+        details: 'Expected FCM token but received device ID'
+      });
+    }
+
     console.log('🔔 FCM API: Sending FCM notification');
-    console.log('   Token:', token.substring(0, 20) + '...');
+    console.log('   Token length:', token.length);
+    console.log('   Token preview:', token.substring(0, 20) + '...');
     console.log('   Title:', title);
     console.log('   Body:', body);
     console.log('   Data:', data);
