@@ -39,15 +39,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
     }
 
-    // Check if token looks like a device ID instead of FCM token
-    if (token.startsWith('flutter_') || token.includes('device') || token.length < 150) {
-      console.error('❌ FCM API: Token appears to be a device ID, not an FCM token');
-      console.error('   Token received:', token);
-      return res.status(400).json({ 
-        error: 'Invalid FCM token - appears to be a device ID',
-        details: 'Expected FCM token but received device ID'
-      });
-    }
+    // Note: Removed device ID check since FCM tokens can contain various characters
 
     console.log('🔔 FCM API: Sending FCM notification');
     console.log('   Token length:', token.length);
