@@ -35,7 +35,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   onExpirationDialogTrigger
 }) => {
   const router = useRouter();
-  const { selectedUserId, selectedGroupId, messages, conversations, groupConversations, setSelectedUserId, setSelectedGroupId, replyingTo, setReplyingTo, forwardingMessage, setForwardingMessage, markMessageAsSeen, updateConversation, updateGroupConversation, hideConversation, hardHideConversation, setConversationExpiration, setGroupConversationExpiration } = useChatStore();
+  const { selectedUserId, selectedGroupId, messages, conversations, groupConversations, setSelectedUserId, setSelectedGroupId, replyingTo, setReplyingTo, forwardingMessage, setForwardingMessage, markMessageAsSeen, updateConversation, updateGroupConversation, hideConversation, unhideConversation, hardHideConversation, setConversationExpiration, setGroupConversationExpiration } = useChatStore();
   const { userData } = useAuthStore();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { markAsRead, markAsSeen } = useConversations(userData?.id || '');
@@ -835,18 +835,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       onClick: () => setIsExpirationSelectorOpen(true),
     },
     {
-      id: 'test-cleanup',
-      label: 'Test Expiration Cleanup',
-      icon: <Trash2 size={16} />,
-      onClick: handleTestExpirationCleanup,
-    },
-    {
-      id: 'debug-expiration',
-      label: 'Debug Expiration Messages',
-      icon: <Clock size={16} />,
-      onClick: handleDebugExpirationMessages,
-    },
-    {
       id: 'chat-info',
       label: isGroupChat ? 'Group Info' : 'Chat Info',
       icon: <Info size={16} />,
@@ -869,9 +857,13 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     ] : [
       {
         id: 'hide-chat',
-        label: 'Hide Chat',
+        label: selectedUser?.hidden ? 'Unhide Chat' : 'Hide Chat',
         icon: <EyeOff size={16} />,
-        onClick: handleHideChat,
+        onClick: selectedUser?.hidden ? () => {
+          if (selectedUserId) {
+            unhideConversation(selectedUserId);
+          }
+        } : handleHideChat,
       },
       {
         id: 'hard-hide-chat',
