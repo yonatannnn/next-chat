@@ -16,6 +16,7 @@ export const useGroupChat = (currentUserId: string, selectedGroupId: string | nu
   const lastEditTime = useRef<number>(0);
   const lastDeleteTime = useRef<number>(0);
   const RATE_LIMIT_MS = 2000; // 2 seconds between operations
+  const subscriptionIdRef = useRef(0);
 
   useEffect(() => {
     if (!selectedGroupId) {
@@ -23,10 +24,16 @@ export const useGroupChat = (currentUserId: string, selectedGroupId: string | nu
       return;
     }
 
+    // Clear previous conversation messages immediately to avoid stale UI.
+    setMessages([]);
     setLoading(true);
+    const subscriptionId = ++subscriptionIdRef.current;
     const unsubscribe = groupChatService.subscribeToGroupMessages(
       selectedGroupId,
       (newMessages) => {
+        if (subscriptionIdRef.current !== subscriptionId) {
+          return;
+        }
         setMessages(newMessages);
         setLoading(false);
       }

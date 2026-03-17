@@ -4,7 +4,6 @@ import "./globals.css";
 import { InstallPrompt } from "@/components/ui/InstallPrompt";
 import { ServiceWorkerRegistration } from "@/components/ui/ServiceWorkerRegistration";
 import { ThemeProvider } from "@/contexts/ThemeContext";
-import { MessageExpirationInitializer } from "@/components/ui/MessageExpirationInitializer";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -49,7 +48,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className="light" suppressHydrationWarning>
       <body
         className={`${inter.variable} antialiased`}
       >
@@ -57,7 +56,6 @@ export default function RootLayout({
               {children}
               <InstallPrompt />
               <ServiceWorkerRegistration />
-              <MessageExpirationInitializer />
             </ThemeProvider>
       </body>
     </html>

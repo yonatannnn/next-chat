@@ -11,14 +11,33 @@ import {
   serverTimestamp,
   getDocs,
   limit,
-  setDoc
+  writeBatch,
+  increment,
+  startAfter,
+  QueryDocumentSnapshot,
+  DocumentData
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Message } from '../store/chatStore';
 import { pushNotificationService } from '@/services/pushNotificationService';
+import { buildMessagePreview, getConversationId } from './chatUtils';
 
 export const chatService = {
-  async sendMessage(senderId: string, receiverId: string, text: string, fileUrl?: string, fileUrls?: string[], replyTo?: any, voiceUrl?: string, voiceDuration?: number, messageType?: 'system' | 'user', senderName?: string, expirationMinutes?: number | null) {
+  async sendMessage(
+    senderId: string,
+    receiverId: string,
+    text: string,
+    fileUrl?: string,
+    fileUrls?: string[],
+    replyTo?: any,
+    voiceUrl?: string,
+    voiceDuration?: number,
+    messageType?: 'system' | 'user',
+    senderName?: string,
+    expirationMinutes?: number | null,
+    senderProfile?: { username?: string; email?: string; avatar?: string },
+    receiverProfile?: { username?: string; email?: string; avatar?: string }
+  ) {
     if (!db) {
       throw new Error('Firebase not initialized');
     }
@@ -32,6 +51,7 @@ export const chatService = {
         expiresAt = expirationTime;
       }
 
+      const conversationId = getConversationId(senderId, receiverId);
       const messageData = {
         senderId: messageType === 'system' ? 'system' : senderId,
         receiverId,
@@ -39,6 +59,8 @@ export const chatService = {
         fileUrl: fileUrl || null,
         fileUrls: fileUrls || null,
         timestamp: serverTimestamp(),
+        conversationId,
+        participants: [senderId, receiverId],
         replyTo: replyTo ? {
           messageId: replyTo.id,
           text: replyTo.text,
@@ -51,8 +73,51 @@ export const chatService = {
         expirationMinutes: expirationMinutes || null,
         isExpired: false,
       };
-      
-      await addDoc(collection(db, 'messages'), messageData);
+      const batch = writeBatch(db);
+      const messageRef = doc(collection(db, 'messages'));
+      batch.set(messageRef, messageData);
+
+      const conversationRef = doc(db, 'conversations', conversationId);
+      const previewText = buildMessagePreview({
+        text,
+        fileUrl,
+        fileUrls,
+        voiceUrl,
+        messageType,
+      });
+
+      const senderProfileData = {
+        username: senderProfile?.username || senderName || 'Someone',
+        email: senderProfile?.email || null,
+        avatar: senderProfile?.avatar || null,
+      };
+      const receiverProfileData = receiverProfile
+        ? {
+            username: receiverProfile.username || 'Unknown',
+            email: receiverProfile.email || null,
+            avatar: receiverProfile.avatar || null,
+          }
+        : null;
+
+      const conversationUpdate: Record<string, unknown> = {
+        participants: [senderId, receiverId],
+        lastMessage: previewText,
+        lastMessageAt: serverTimestamp(),
+        lastSenderId: senderId,
+        updatedAt: serverTimestamp(),
+        [`unreadCounts.${receiverId}`]: increment(1),
+        [`unreadCounts.${senderId}`]: 0,
+        [`lastReadAt.${senderId}`]: serverTimestamp(),
+        [`profiles.${senderId}`]: senderProfileData,
+      };
+
+      if (receiverProfileData) {
+        conversationUpdate[`profiles.${receiverId}`] = receiverProfileData;
+      }
+
+      batch.set(conversationRef, conversationUpdate, { merge: true });
+
+      await batch.commit();
       
       // Send push notification to receiver (only for user messages, not system messages)
       if (messageType !== 'system') {
@@ -84,21 +149,29 @@ export const chatService = {
     }
   },
 
-  subscribeToMessages(currentUserId: string, otherUserId: string, callback: (messages: Message[]) => void) {
+  subscribeToMessages(
+    currentUserId: string,
+    otherUserId: string,
+    callback: (messages: Message[], cursor: QueryDocumentSnapshot<DocumentData> | null, hasMore: boolean) => void,
+    options?: { limit?: number }
+  ) {
     if (!db) {
       throw new Error('Firebase not initialized');
     }
     
     const messagesRef = collection(db, 'messages');
+    const conversationId = getConversationId(currentUserId, otherUserId);
+    const pageSize = options?.limit ?? 50;
     const q = query(
       messagesRef,
-      where('senderId', 'in', [currentUserId, otherUserId]),
-      where('receiverId', 'in', [currentUserId, otherUserId]),
-      orderBy('timestamp', 'asc')
+      where('conversationId', '==', conversationId),
+      orderBy('timestamp', 'desc'),
+      limit(pageSize)
     );
 
     return onSnapshot(q, (snapshot) => {
-      const messages: Message[] = snapshot.docs
+      const docs = snapshot.docs;
+      const messages: Message[] = docs
         .filter(doc => {
           const data = doc.data();
           // Filter out CONVERSATION_DELETED system messages
@@ -130,9 +203,73 @@ export const chatService = {
             expirationMinutes: data.expirationMinutes || null,
             isExpired: data.isExpired || false,
           };
-        });
-      callback(messages);
+        })
+        .reverse();
+      const cursor = docs.length > 0 ? docs[docs.length - 1] : null;
+      const hasMore = docs.length === pageSize;
+      callback(messages, cursor, hasMore);
     });
+  },
+
+  async loadOlderMessages(
+    currentUserId: string,
+    otherUserId: string,
+    cursor: QueryDocumentSnapshot<DocumentData>,
+    pageSize = 50
+  ): Promise<{ messages: Message[]; cursor: QueryDocumentSnapshot<DocumentData> | null; hasMore: boolean }> {
+    if (!db) {
+      throw new Error('Firebase not initialized');
+    }
+
+    const messagesRef = collection(db, 'messages');
+    const conversationId = getConversationId(currentUserId, otherUserId);
+    const q = query(
+      messagesRef,
+      where('conversationId', '==', conversationId),
+      orderBy('timestamp', 'desc'),
+      startAfter(cursor),
+      limit(pageSize)
+    );
+
+    const snapshot = await getDocs(q);
+    const docs = snapshot.docs;
+    const messages: Message[] = docs
+      .filter(doc => {
+        const data = doc.data();
+        return !(data.text === 'CONVERSATION_DELETED' && data.isSystemMessage);
+      })
+      .map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          senderId: data.senderId,
+          receiverId: data.receiverId,
+          text: data.text,
+          fileUrl: data.fileUrl,
+          fileUrls: data.fileUrls,
+          timestamp: data.timestamp?.toDate() || new Date(),
+          edited: data.edited || false,
+          editedAt: data.editedAt?.toDate(),
+          deleted: data.deleted || false,
+          replyTo: data.replyTo || null,
+          isForwarded: data.isForwarded || false,
+          originalSenderId: data.originalSenderId || null,
+          originalSenderName: data.originalSenderName || null,
+          forwardedBy: data.forwardedBy || null,
+          voiceUrl: data.voiceUrl || null,
+          voiceDuration: data.voiceDuration || null,
+          seen: data.seen || false,
+          seenAt: data.seenAt?.toDate(),
+          expiresAt: data.expiresAt?.toDate() || null,
+          expirationMinutes: data.expirationMinutes || null,
+          isExpired: data.isExpired || false,
+        };
+      })
+      .reverse();
+
+    const nextCursor = docs.length > 0 ? docs[docs.length - 1] : null;
+    const hasMore = docs.length === pageSize;
+    return { messages, cursor: nextCursor, hasMore };
   },
 
   subscribeToAllIncomingMessages(currentUserId: string, callback: (messages: Message[]) => void) {
@@ -141,10 +278,11 @@ export const chatService = {
     }
     
     const messagesRef = collection(db, 'messages');
-    // Simple query without orderBy to avoid index requirement
     const q = query(
       messagesRef,
-      where('receiverId', '==', currentUserId)
+      where('receiverId', '==', currentUserId),
+      orderBy('timestamp', 'desc'),
+      limit(50)
     );
 
     return onSnapshot(q, (snapshot) => {
@@ -181,6 +319,19 @@ export const chatService = {
       
       // Return all messages, let the notification hook handle filtering
       callback(messages);
+    });
+  },
+
+  async markConversationRead(currentUserId: string, otherUserId: string) {
+    if (!db) {
+      throw new Error('Firebase not initialized');
+    }
+
+    const conversationId = getConversationId(currentUserId, otherUserId);
+    const conversationRef = doc(db, 'conversations', conversationId);
+    await updateDoc(conversationRef, {
+      [`unreadCounts.${currentUserId}`]: 0,
+      [`lastReadAt.${currentUserId}`]: serverTimestamp(),
     });
   },
 
@@ -249,60 +400,41 @@ export const chatService = {
     }
     
     try {
-      // Get all messages between the two users
+      const conversationId = getConversationId(userId1, userId2);
       const messagesRef = collection(db, 'messages');
-      const q1 = query(
-        messagesRef,
-        where('senderId', '==', userId1),
-        where('receiverId', '==', userId2)
-      );
-      const q2 = query(
-        messagesRef,
-        where('senderId', '==', userId2),
-        where('receiverId', '==', userId1)
-      );
+      let lastDoc: QueryDocumentSnapshot<DocumentData> | null = null;
+      const pageSize = 400;
 
-      // Execute both queries
-      const [snapshot1, snapshot2] = await Promise.all([
-        getDocs(q1),
-        getDocs(q2)
-      ]);
+      while (true) {
+        const q = lastDoc
+          ? query(
+              messagesRef,
+              where('conversationId', '==', conversationId),
+              orderBy('timestamp', 'desc'),
+              startAfter(lastDoc),
+              limit(pageSize)
+            )
+          : query(
+              messagesRef,
+              where('conversationId', '==', conversationId),
+              orderBy('timestamp', 'desc'),
+              limit(pageSize)
+            );
 
-      // Collect all message IDs to delete
-      const messageIds: string[] = [];
-      snapshot1.docs.forEach(doc => messageIds.push(doc.id));
-      snapshot2.docs.forEach(doc => messageIds.push(doc.id));
+        const snapshot = await getDocs(q);
+        if (snapshot.empty) break;
 
-      // Delete all messages in batch
-      const deletePromises = messageIds.map(messageId => {
-        const messageRef = doc(db!, 'messages', messageId);
-        return deleteDoc(messageRef);
-      });
+        const batch = writeBatch(db);
+        snapshot.docs.forEach((docSnap) => {
+          batch.delete(doc(db!, 'messages', docSnap.id));
+        });
+        await batch.commit();
 
-      await Promise.all(deletePromises);
+        lastDoc = snapshot.docs[snapshot.docs.length - 1] || null;
+        if (snapshot.docs.length < pageSize) break;
+      }
 
-      // Add a special "deleted" message to mark the conversation as deleted
-      // This ensures the conversation disappears from both users' chat lists
-      const deletedMessageRef = doc(collection(db!, 'messages'));
-      await setDoc(deletedMessageRef, {
-        senderId: userId1,
-        receiverId: userId2,
-        text: 'CONVERSATION_DELETED',
-        timestamp: serverTimestamp(),
-        deleted: true,
-        isSystemMessage: true
-      });
-
-      // Also add the reverse message for the other user
-      const deletedMessageRef2 = doc(collection(db!, 'messages'));
-      await setDoc(deletedMessageRef2, {
-        senderId: userId2,
-        receiverId: userId1,
-        text: 'CONVERSATION_DELETED',
-        timestamp: serverTimestamp(),
-        deleted: true,
-        isSystemMessage: true
-      });
+      await deleteDoc(doc(db, 'conversations', conversationId));
 
     } catch (error: unknown) {
       if (error instanceof Error && error.message.includes('resource-exhausted')) {
@@ -320,6 +452,7 @@ export const chatService = {
     try {
       // Create forwarded messages for each recipient
       const forwardPromises = recipientIds.map(async (recipientId) => {
+        const conversationId = getConversationId(senderId, recipientId);
         const forwardedMessageData = {
           senderId,
           receiverId: recipientId,
@@ -327,6 +460,8 @@ export const chatService = {
           fileUrl: originalMessage.fileUrl,
           fileUrls: originalMessage.fileUrls,
           timestamp: serverTimestamp(),
+          conversationId,
+          participants: [senderId, recipientId],
           isForwarded: true,
           originalMessageId: originalMessage.id,
           originalSenderId: originalMessage.senderId,
@@ -334,7 +469,34 @@ export const chatService = {
           forwardedBy: senderId,
         };
         
-        return addDoc(collection(db!, 'messages'), forwardedMessageData);
+        const batch = writeBatch(db!);
+        const messageRef = doc(collection(db!, 'messages'));
+        batch.set(messageRef, forwardedMessageData);
+
+        const conversationRef = doc(db!, 'conversations', conversationId);
+        const previewText = buildMessagePreview({
+          text: originalMessage.text,
+          fileUrl: originalMessage.fileUrl || undefined,
+          fileUrls: originalMessage.fileUrls || undefined,
+          voiceUrl: originalMessage.voiceUrl || undefined,
+        });
+
+        batch.set(
+          conversationRef,
+          {
+            participants: [senderId, recipientId],
+            lastMessage: previewText,
+            lastMessageAt: serverTimestamp(),
+            lastSenderId: senderId,
+            updatedAt: serverTimestamp(),
+            [`unreadCounts.${recipientId}`]: increment(1),
+            [`unreadCounts.${senderId}`]: 0,
+            [`lastReadAt.${senderId}`]: serverTimestamp(),
+          },
+          { merge: true }
+        );
+
+        await batch.commit();
       });
 
       await Promise.all(forwardPromises);

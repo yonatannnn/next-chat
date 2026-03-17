@@ -26,6 +26,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Invalid URL protocol' });
     }
 
+    // Use oEmbed for YouTube to avoid fetch blocks.
+    if (isYouTubeUrl(urlObj.hostname)) {
+      const metadata = await fetchYouTubeMetadata(url);
+      return res.status(200).json(metadata);
+    }
+
     // Fetch the URL content
     const response = await fetch(url, {
       headers: {
@@ -52,6 +58,35 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       message: error instanceof Error ? error.message : 'Unknown error'
     });
   }
+}
+
+function isYouTubeUrl(hostname: string) {
+  const host = hostname.toLowerCase();
+  return host === 'youtu.be' || host.endsWith('youtube.com');
+}
+
+async function fetchYouTubeMetadata(url: string): Promise<LinkMetadata> {
+  const oEmbedUrl = `https://www.youtube.com/oembed?format=json&url=${encodeURIComponent(url)}`;
+  const response = await fetch(oEmbedUrl, {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (compatible; LinkPreview/1.0)',
+    },
+    signal: AbortSignal.timeout(10000),
+  });
+
+  if (!response.ok) {
+    throw new Error(`YouTube oEmbed failed: HTTP ${response.status}`);
+  }
+
+  const data = await response.json();
+  const domain = new URL(url).hostname;
+  return {
+    title: typeof data.title === 'string' ? data.title : domain,
+    description: typeof data.author_name === 'string' ? `YouTube · ${data.author_name}` : '',
+    image: typeof data.thumbnail_url === 'string' ? data.thumbnail_url : '',
+    domain,
+    url,
+  };
 }
 
 function extractMetadata(html: string, url: string): LinkMetadata {

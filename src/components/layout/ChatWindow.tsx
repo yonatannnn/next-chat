@@ -20,7 +20,6 @@ import { ProfileRecommendationBubble } from '@/components/ui/ProfileRecommendati
 import { MessageExpirationInput } from '@/components/ui/MessageExpirationInput';
 import { useRecommendations } from '@/features/profile/hooks/useRecommendations';
 import { conversationSettingsService } from '@/services/conversationSettingsService';
-import { messageExpirationService } from '@/services/messageExpirationService';
 import { Trash2, Info, Users, Search, X, ChevronUp, ChevronDown, EyeOff, Lock, AlertTriangle, Clock } from 'lucide-react';
 
 interface ChatWindowProps {
@@ -35,10 +34,10 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   onExpirationDialogTrigger
 }) => {
   const router = useRouter();
-  const { selectedUserId, selectedGroupId, messages, conversations, groupConversations, setSelectedUserId, setSelectedGroupId, replyingTo, setReplyingTo, forwardingMessage, setForwardingMessage, markMessageAsSeen, updateConversation, updateGroupConversation, hideConversation, unhideConversation, hardHideConversation, setConversationExpiration, setGroupConversationExpiration } = useChatStore();
+  const { selectedUserId, selectedGroupId, messages, conversations, groupConversations, setSelectedUserId, setSelectedGroupId, replyingTo, setReplyingTo, forwardingMessage, setForwardingMessage, hideConversation, unhideConversation, hardHideConversation, setConversationExpiration, setGroupConversationExpiration } = useChatStore();
   const { userData } = useAuthStore();
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const { markAsRead, markAsSeen } = useConversations(userData?.id || '');
+  const { markAsSeen } = useConversations(userData?.id || '');
   const { markGroupAsRead, markGroupAsSeen } = useGroupConversations(userData?.id || '');
   const { recommendations, acceptRecommendation, rejectRecommendation, deleteRecommendation } = useRecommendations(userData?.id || '');
   
@@ -338,7 +337,11 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   }, [isSearchOpen, searchResults.length, currentSearchIndex]);
   const [smoothScrollingEnabled, setSmoothScrollingEnabled] = useState(false);
 
-  const { sendMessage, editMessage, deleteMessage, deleteAllMessages, forwardMessage, sendVoiceMessage } = useChat(userData?.id || '', selectedUserId);
+  const { sendMessage, editMessage, deleteMessage, deleteAllMessages, forwardMessage, sendVoiceMessage, loadOlderMessages, hasMoreMessages } = useChat(
+    userData?.id || '',
+    selectedUserId,
+    userData ? { username: userData.username, email: userData.email, avatar: userData.avatar } : undefined
+  );
   const { sendMessage: sendGroupMessage, editMessage: editGroupMessage, deleteMessage: deleteGroupMessage, sendVoiceMessage: sendGroupVoiceMessage } = useGroupChat(userData?.id || '', selectedGroupId);
 
   const selectedUser = conversations.find(user => user.userId === selectedUserId);
@@ -409,6 +412,11 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         const conversation = conversations.find(conv => conv.userId === selectedUserId);
         if (conversation && conversation.unreadCount > 0) {
           markAsSeen(selectedUserId);
+          if (userData?.id) {
+            chatService.markConversationRead(userData.id, selectedUserId).catch((error) => {
+              console.error('Error marking conversation as read:', error);
+            });
+          }
         }
       } else if (selectedGroupId) {
         const groupConversation = groupConversations.find(conv => conv.groupId === selectedGroupId);
@@ -431,148 +439,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       }, 100);
     }
   }, [selectedUserId, selectedGroupId, messages.length, isSearchOpen]);
-
-  // PWA visibility detection for message seen status
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      // Only process if we're in PWA mode and page becomes visible
-      const isPWA = window.matchMedia('(display-mode: standalone)').matches || 
-                   (window.navigator as any).standalone === true;
-      
-      if (isPWA && document.visibilityState === 'visible' && 
-          (selectedUserId || selectedGroupId) && userData?.id && messages.length > 0) {
-        // Small delay to ensure user is actually viewing the chat
-        setTimeout(() => {
-          if (selectedUserId) {
-            const unseenMessages = messages.filter(msg => 
-              msg.senderId === selectedUserId && 
-              msg.receiverId === userData.id && 
-              !msg.seen
-            );
-
-            if (unseenMessages.length > 0) {
-              unseenMessages.forEach(async (message) => {
-                try {
-                  await chatService.markMessageAsSeen(message.id);
-                  markMessageAsSeen(message.id);
-                  updateConversation(selectedUserId, { lastMessageSeen: true });
-                } catch (error) {
-                  console.error('Error marking message as seen:', error);
-                }
-              });
-            }
-          } else if (selectedGroupId) {
-            const unseenMessages = messages.filter(msg => 
-              msg.groupId === selectedGroupId && 
-              msg.senderId !== userData.id && 
-              !msg.seen
-            );
-
-            if (unseenMessages.length > 0) {
-              unseenMessages.forEach(async (message) => {
-                try {
-                  await groupChatService.markGroupMessageAsSeen(message.id);
-                  markMessageAsSeen(message.id);
-                  updateGroupConversation(selectedGroupId, { lastMessageSeen: true });
-                } catch (error) {
-                  console.error('Error marking group message as seen:', error);
-                }
-              });
-            }
-          }
-        }, 500); // Shorter delay for PWA visibility
-      }
-    };
-
-    // Listen for visibility changes (important for PWA)
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    
-    // Also listen for focus events (additional PWA detection)
-    const handleFocus = () => {
-      if (document.visibilityState === 'visible') {
-        handleVisibilityChange();
-      }
-    };
-    window.addEventListener('focus', handleFocus);
-
-    // Additional PWA-specific detection: listen for app state changes
-    const handleAppStateChange = () => {
-      // This helps detect when the PWA app becomes active again
-      if (document.visibilityState === 'visible' && document.hasFocus()) {
-        handleVisibilityChange();
-      }
-    };
-    
-    // Listen for when the app becomes active (useful for PWA)
-    window.addEventListener('pageshow', handleAppStateChange);
-    window.addEventListener('resume', handleAppStateChange); // Some browsers support this
-
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('focus', handleFocus);
-      window.removeEventListener('pageshow', handleAppStateChange);
-      window.removeEventListener('resume', handleAppStateChange);
-    };
-  }, [selectedUserId, selectedGroupId, messages, userData?.id, markMessageAsSeen, updateConversation, updateGroupConversation]);
-
-  // Simplified message seen logic - mark as seen when chat is selected and messages are loaded
-  useEffect(() => {
-    if ((selectedUserId || selectedGroupId) && userData?.id && messages.length > 0) {
-      // Add a small delay to ensure user is actually viewing the chat
-      const markAsSeenTimeout = setTimeout(() => {
-        if (selectedUserId) {
-          // Find messages sent TO the current user (incoming messages) that haven't been seen yet
-          const unseenMessages = messages.filter(msg => 
-            msg.senderId === selectedUserId && 
-            msg.receiverId === userData.id && 
-            !msg.seen
-          );
-
-          // Only mark as seen if there are actually unseen messages
-          if (unseenMessages.length > 0) {
-            // Mark each unseen incoming message as seen
-            unseenMessages.forEach(async (message) => {
-              try {
-                await chatService.markMessageAsSeen(message.id);
-                markMessageAsSeen(message.id);
-                
-                // Update the conversation's lastMessageSeen status
-                updateConversation(selectedUserId, { lastMessageSeen: true });
-              } catch (error) {
-                console.error('Error marking message as seen:', error);
-              }
-            });
-          }
-        } else if (selectedGroupId) {
-          // For group messages, mark messages from other users as seen
-          const unseenMessages = messages.filter(msg => 
-            msg.groupId === selectedGroupId && 
-            msg.senderId !== userData.id && 
-            !msg.seen
-          );
-
-          // Only mark as seen if there are actually unseen messages
-          if (unseenMessages.length > 0) {
-            // Mark each unseen group message as seen
-            unseenMessages.forEach(async (message) => {
-              try {
-                await groupChatService.markGroupMessageAsSeen(message.id);
-                markMessageAsSeen(message.id);
-                
-                // Update the group conversation's lastMessageSeen status
-                updateGroupConversation(selectedGroupId, { lastMessageSeen: true });
-              } catch (error) {
-                console.error('Error marking group message as seen:', error);
-              }
-            });
-          }
-        }
-      }, 1000); // 1 second delay to ensure user is viewing
-
-      return () => clearTimeout(markAsSeenTimeout);
-    }
-  }, [selectedUserId, selectedGroupId, messages, userData?.id, markMessageAsSeen, updateConversation, updateGroupConversation]);
-
 
   const handleSendMessage = async (text: string, fileUrl?: string, fileUrls?: string[], replyTo?: any) => {
     if (selectedUserId) {
@@ -803,24 +669,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     }
   };
 
-  const handleTestExpirationCleanup = async () => {
-    try {
-      console.log('🧪 Testing expiration cleanup...');
-      await messageExpirationService.triggerCleanup();
-    } catch (error) {
-      console.error('Error testing expiration cleanup:', error);
-    }
-  };
-
-  const handleDebugExpirationMessages = async () => {
-    try {
-      console.log('🔍 Debugging expiration messages...');
-      await messageExpirationService.debugExpirationMessages();
-    } catch (error) {
-      console.error('Error debugging expiration messages:', error);
-    }
-  };
-
   const dropdownItems = [
     {
       id: 'search',
@@ -994,6 +842,16 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
 
       {/* Messages - Scrollable */}
       <div className="messages-container flex-1 overflow-y-auto min-h-0 p-3 md:p-4 space-y-3 md:space-y-4 pt-4 md:pt-4 overflow-x-hidden bg-white dark:bg-gray-900">
+        {selectedUserId && hasMoreMessages && (
+          <div className="flex justify-center">
+            <button
+              onClick={loadOlderMessages}
+              className="text-xs px-3 py-1 rounded-full border border-gray-300 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+            >
+              Load older messages
+            </button>
+          </div>
+        )}
         {/* Messages */}
         {messages.map((message) => {
           const isOwn = message.senderId === userData?.id;

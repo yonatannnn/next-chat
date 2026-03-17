@@ -1,8 +1,18 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useChatStore, Message } from '../store/chatStore';
 import { chatService } from '../services/chatService';
 
-export const useChat = (currentUserId: string, selectedUserId: string | null) => {
+type UserProfile = {
+  username?: string;
+  email?: string;
+  avatar?: string;
+};
+
+export const useChat = (
+  currentUserId: string,
+  selectedUserId: string | null,
+  senderProfile?: UserProfile
+) => {
   const { 
     messages, 
     setMessages, 
@@ -17,6 +27,10 @@ export const useChat = (currentUserId: string, selectedUserId: string | null) =>
   const lastEditTime = useRef<number>(0);
   const lastDeleteTime = useRef<number>(0);
   const RATE_LIMIT_MS = 2000; // 2 seconds between operations
+  const lastCursorRef = useRef<any | null>(null);
+  const isLoadingOlderRef = useRef(false);
+  const [hasMoreMessages, setHasMoreMessages] = useState(false);
+  const subscriptionIdRef = useRef(0);
 
   useEffect(() => {
     if (!selectedUserId) {
@@ -24,14 +38,25 @@ export const useChat = (currentUserId: string, selectedUserId: string | null) =>
       return;
     }
 
+    // Clear previous conversation messages immediately to avoid stale UI.
+    setMessages([]);
+    lastCursorRef.current = null;
+    setHasMoreMessages(false);
     setLoading(true);
+    const subscriptionId = ++subscriptionIdRef.current;
     const unsubscribe = chatService.subscribeToMessages(
       currentUserId,
       selectedUserId,
-      (newMessages) => {
+      (newMessages, cursor, hasMore) => {
+        if (subscriptionIdRef.current !== subscriptionId) {
+          return;
+        }
         setMessages(newMessages);
+        lastCursorRef.current = cursor;
+        setHasMoreMessages(hasMore);
         setLoading(false);
-      }
+      },
+      { limit: 50 }
     );
 
     return () => unsubscribe();
@@ -44,10 +69,29 @@ export const useChat = (currentUserId: string, selectedUserId: string | null) =>
       // Get expiration setting for this conversation
       const conversation = conversations.find(conv => conv.userId === selectedUserId);
       const expirationMinutes = conversation?.expirationMinutes || null;
+      const receiverProfile = conversation ? {
+        username: conversation.username,
+        email: conversation.email,
+        avatar: conversation.avatar,
+      } : undefined;
       
       console.log(`Sending message to ${selectedUserId} with expiration: ${expirationMinutes} minutes`);
       
-      await chatService.sendMessage(currentUserId, selectedUserId, text, fileUrl, fileUrls, replyTo, voiceUrl, voiceDuration, messageType, senderName, expirationMinutes);
+      await chatService.sendMessage(
+        currentUserId,
+        selectedUserId,
+        text,
+        fileUrl,
+        fileUrls,
+        replyTo,
+        voiceUrl,
+        voiceDuration,
+        messageType,
+        senderName,
+        expirationMinutes,
+        senderProfile,
+        receiverProfile
+      );
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : 'An error occurred');
     }
@@ -159,12 +203,53 @@ export const useChat = (currentUserId: string, selectedUserId: string | null) =>
       // Get expiration setting for this conversation
       const conversation = conversations.find(conv => conv.userId === selectedUserId);
       const expirationMinutes = conversation?.expirationMinutes || null;
+      const receiverProfile = conversation ? {
+        username: conversation.username,
+        email: conversation.email,
+        avatar: conversation.avatar,
+      } : undefined;
       
-      await chatService.sendMessage(currentUserId, selectedUserId, '', undefined, undefined, replyTo, url, duration, 'user', undefined, expirationMinutes);
+      await chatService.sendMessage(
+        currentUserId,
+        selectedUserId,
+        '',
+        undefined,
+        undefined,
+        replyTo,
+        url,
+        duration,
+        'user',
+        undefined,
+        expirationMinutes,
+        senderProfile,
+        receiverProfile
+      );
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : 'An error occurred');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadOlderMessages = async () => {
+    if (!selectedUserId || !lastCursorRef.current || isLoadingOlderRef.current) return;
+    isLoadingOlderRef.current = true;
+    try {
+      const { messages: olderMessages, cursor, hasMore } = await chatService.loadOlderMessages(
+        currentUserId,
+        selectedUserId,
+        lastCursorRef.current,
+        50
+      );
+      if (olderMessages.length > 0) {
+        const existingIds = new Set(messages.map(m => m.id));
+        const merged = [...olderMessages.filter(m => !existingIds.has(m.id)), ...messages];
+        setMessages(merged);
+      }
+      lastCursorRef.current = cursor;
+      setHasMoreMessages(hasMore);
+    } finally {
+      isLoadingOlderRef.current = false;
     }
   };
 
@@ -176,5 +261,7 @@ export const useChat = (currentUserId: string, selectedUserId: string | null) =>
     deleteAllMessages: handleDeleteAllMessages,
     forwardMessage,
     sendVoiceMessage,
+    loadOlderMessages,
+    hasMoreMessages,
   };
 };

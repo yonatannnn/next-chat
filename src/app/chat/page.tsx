@@ -24,7 +24,11 @@ export default function ChatPage() {
   const { user, userData, isLoading } = useAuth();
   const { users } = useUsers(userData?.id || '');
   const { selectedUserId, selectedGroupId, conversations, groupConversations, setSelectedUserId, setSelectedGroupId, hideConversation, hardHideConversation } = useChatStore();
-  const { messages } = useChat(userData?.id || '', selectedUserId);
+  const { messages } = useChat(
+    userData?.id || '',
+    selectedUserId,
+    userData ? { username: userData.username, email: userData.email, avatar: userData.avatar } : undefined
+  );
   const [isSidebarOpen, setIsSidebarOpen] = useState(true); // Start with sidebar open on mobile
   const [isChatInfoOpen, setIsChatInfoOpen] = useState(false);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);

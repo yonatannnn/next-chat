@@ -26,7 +26,6 @@ interface ThemeProviderProps {
 
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   const [theme, setThemeState] = useState<Theme>('light');
-  const [mounted, setMounted] = useState(false);
 
   // Initialize theme from localStorage or system preference
   useEffect(() => {
@@ -42,19 +41,16 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
       console.log('Using system preference:', initialTheme);
       setThemeState(initialTheme);
     }
-    setMounted(true);
   }, []);
 
   // Update localStorage and document class when theme changes
   useEffect(() => {
-    if (mounted) {
-      console.log('Applying theme:', theme);
-      localStorage.setItem('theme', theme);
-      document.documentElement.classList.remove('light', 'dark');
-      document.documentElement.classList.add(theme);
-      console.log('Document classes after theme change:', document.documentElement.className);
-    }
-  }, [theme, mounted]);
+    console.log('Applying theme:', theme);
+    localStorage.setItem('theme', theme);
+    document.documentElement.classList.remove('light', 'dark');
+    document.documentElement.classList.add(theme);
+    console.log('Document classes after theme change:', document.documentElement.className);
+  }, [theme]);
 
   const toggleTheme = () => {
     setThemeState(prev => {
@@ -67,11 +63,6 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   const setTheme = (newTheme: Theme) => {
     setThemeState(newTheme);
   };
-
-  // Prevent hydration mismatch by not rendering until mounted
-  if (!mounted) {
-    return <div className="light">{children}</div>;
-  }
 
   return (
     <ThemeContext.Provider value={{ theme, toggleTheme, setTheme }}>

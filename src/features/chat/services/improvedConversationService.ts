@@ -6,8 +6,8 @@ import {
   onSnapshot,
   getDocs,
   limit,
-  getDoc,
-  doc
+  DocumentData,
+  QuerySnapshot
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Conversation } from '../store/chatStore';
@@ -19,197 +19,65 @@ export const improvedConversationService = {
       throw new Error('Firebase not initialized');
     }
     
-    const messagesRef = collection(db, 'messages');
-    
-    // Get all messages where current user is involved (either sender or receiver)
-    const sentMessagesQuery = query(
-      messagesRef,
-      where('senderId', '==', currentUserId)
+    const conversationsRef = collection(db, 'conversations');
+    const q = query(
+      conversationsRef,
+      where('participants', 'array-contains', currentUserId),
+      orderBy('lastMessageAt', 'desc'),
+      limit(100)
     );
 
-    const receivedMessagesQuery = query(
-      messagesRef,
-      where('receiverId', '==', currentUserId)
-    );
-
-    let sentUnsubscribe: (() => void) | null = null;
-    let receivedUnsubscribe: (() => void) | null = null;
-    let allMessages: any[] = [];
-
-    const processConversations = async () => {
-      const conversationsMap = new Map<string, Conversation>();
-      const userIds = new Set<string>();
-      
-      // Collect all user IDs from messages
-      allMessages.forEach(doc => {
-        const data = doc.data();
-        if (data.senderId === currentUserId && data.receiverId !== currentUserId) {
-          userIds.add(data.receiverId);
-        } else if (data.receiverId === currentUserId && data.senderId !== currentUserId) {
-          userIds.add(data.senderId);
-        }
-      });
-
-      // Process each conversation
-      for (const userId of userIds) {
-        try {
-          const userDoc = await getDoc(doc(db!, 'users', userId));
-          
-          if (userDoc.exists()) {
-            const userData = userDoc.data();
-            
-            // Get all messages between current user and this user
-            const conversationMessages = allMessages.filter(msg => {
-              const data = msg.data();
-              return (data.senderId === currentUserId && data.receiverId === userId) ||
-                     (data.senderId === userId && data.receiverId === currentUserId);
-            });
-
-            // Check if conversation was deleted (has CONVERSATION_DELETED message)
-            const deletedMessages = conversationMessages.filter(msg => {
-              const data = msg.data();
-              return data.text === 'CONVERSATION_DELETED' && data.isSystemMessage;
-            });
-
-            // If there are deleted messages, check if there are newer messages after deletion
-            if (deletedMessages.length > 0) {
-              // Get the latest deletion timestamp
-              const latestDeletionTime = Math.max(...deletedMessages.map(msg => {
-                const data = msg.data();
-                return data.timestamp?.toDate()?.getTime() || 0;
-              }));
-
-              // Check if there are any messages newer than the latest deletion
-              const hasNewerMessages = conversationMessages.some(msg => {
-                const data = msg.data();
-                const messageTime = data.timestamp?.toDate()?.getTime() || 0;
-                return messageTime > latestDeletionTime && data.text !== 'CONVERSATION_DELETED';
-              });
-
-              // Skip this conversation only if there are no newer messages after deletion
-              if (!hasNewerMessages) {
-                continue;
-              }
-            }
-            
-            // Filter out CONVERSATION_DELETED messages and sort by timestamp
-            const validMessages = conversationMessages.filter(msg => {
-              const data = msg.data();
-              return data.text !== 'CONVERSATION_DELETED' || !data.isSystemMessage;
-            });
-            
-            validMessages.sort((a, b) => {
-              const timeA = a.data().timestamp?.toDate()?.getTime() || 0;
-              const timeB = b.data().timestamp?.toDate()?.getTime() || 0;
-              return timeB - timeA;
-            });
-            
-            const latestMessage = validMessages[0];
-            const lastMessageTime = latestMessage?.data().timestamp?.toDate() || new Date();
-            const lastMessageData = latestMessage?.data();
-            const lastMessageText = lastMessageData?.text || '';
-            const lastMessageSenderId = lastMessageData?.senderId;
-            
-            // Count unread messages (messages sent TO current user) from valid messages only
-            const unreadCount = validMessages.filter(msg => {
-              const data = msg.data();
-              return data.senderId === userId && data.receiverId === currentUserId;
-            }).length;
-            
-            // Check if the last message was sent TO the current user (making it bold)
-            const isLastMessageToMe = lastMessageData?.receiverId === currentUserId;
-            
-            // Format the last message to show who sent it
-            let formattedLastMessage = '';
-            let previewText = '';
-            
-            // Determine preview text based on message type
-            if (lastMessageText) {
-              previewText = lastMessageText;
-            } else if (lastMessageData?.fileUrl) {
-              previewText = '📷 Photo';
-            } else if (lastMessageData?.fileUrls && lastMessageData.fileUrls.length > 0) {
-              previewText = `📷 ${lastMessageData.fileUrls.length} photos`;
-            } else if (lastMessageData?.voiceUrl) {
-              previewText = '🎤 Voice message';
-            } else {
-              previewText = 'Message';
-            }
-            
-            if (previewText) {
-              if (lastMessageSenderId === currentUserId) {
-                formattedLastMessage = `Me: ${previewText}`;
-              } else {
-                formattedLastMessage = `${userData.username}: ${previewText}`;
-              }
-            }
-            
-            // Load expiration settings for this conversation
-            let expirationMinutes: number | null = null;
-            try {
-              expirationMinutes = await conversationSettingsService.getConversationExpiration(
-                currentUserId, 
-                userId
-              );
-            } catch (error) {
-              console.error('Error loading expiration settings for conversation:', userId, error);
-            }
-
-            const conversation: Conversation = {
-              id: userId,
-              userId: userId,
-              username: userData.username,
-              email: userData.email,
-              avatar: userData.avatar,
-              lastMessage: formattedLastMessage,
-              lastMessageTime: lastMessageTime,
-              lastMessageSeen: lastMessageData?.seen || false,
-              unreadCount: isLastMessageToMe ? 1 : 0, // Use 1 for bold, 0 for normal
-              isOnline: true,
-              expirationMinutes
-            };
-            
-            conversationsMap.set(userId, conversation);
-          }
-        } catch (error) {
-          console.error('Error fetching user data for:', userId, error);
-        }
+    let settingsMapPromise: Promise<Map<string, number | null>> | null = null;
+    const getSettingsMap = () => {
+      if (!settingsMapPromise) {
+        settingsMapPromise = conversationSettingsService.getAllConversationSettings(currentUserId);
       }
-      
-      // Convert map to array and sort by last message time
-      const conversations = Array.from(conversationsMap.values())
-        .sort((a, b) => {
-          const timeA = a.lastMessageTime?.getTime() || 0;
-          const timeB = b.lastMessageTime?.getTime() || 0;
-          return timeB - timeA;
-        });
-      
+      return settingsMapPromise;
+    };
+
+    const mapSnapshot = async (snapshot: QuerySnapshot<DocumentData>) => {
+      const settingsMap = await getSettingsMap();
+      const conversations: Conversation[] = snapshot.docs.map((docSnap) => {
+        const data = docSnap.data();
+        const participants: string[] = data.participants || [];
+        const peerId = participants.find((id) => id !== currentUserId);
+        if (!peerId) return null;
+        const profiles = data.profiles || {};
+        const peerProfile = profiles[peerId] || {};
+        const lastMessageText = data.lastMessage || '';
+        const lastMessageSenderId = data.lastSenderId;
+        const formattedLastMessage = lastMessageSenderId === currentUserId
+          ? `Me: ${lastMessageText}`
+          : `${peerProfile.username || 'Unknown'}: ${lastMessageText}`;
+
+        const unreadCounts = data.unreadCounts || {};
+        const unreadCount = unreadCounts[currentUserId] || 0;
+
+        return {
+          id: peerId,
+          userId: peerId,
+          username: peerProfile.username || 'Unknown',
+          email: peerProfile.email || '',
+          avatar: peerProfile.avatar || undefined,
+          lastMessage: formattedLastMessage,
+          lastMessageTime: data.lastMessageAt?.toDate() || new Date(),
+          lastMessageSeen: unreadCount === 0,
+          unreadCount,
+          isOnline: true,
+          expirationMinutes: settingsMap.get(peerId) ?? null,
+        } as Conversation;
+      }).filter(Boolean) as Conversation[];
+
       callback(conversations);
     };
 
-    // Subscribe to sent messages
-    sentUnsubscribe = onSnapshot(sentMessagesQuery, (snapshot) => {
-      const sentMessages = snapshot.docs;
-      allMessages = [...allMessages.filter(msg => msg.data().receiverId === currentUserId), ...sentMessages];
-      processConversations();
+    return onSnapshot(q, (snapshot) => {
+      mapSnapshot(snapshot).catch((error) => {
+        console.error('Error processing conversations snapshot:', error);
+      });
     }, (error) => {
-      console.error('Error fetching sent messages:', error);
+      console.error('Error fetching conversations:', error);
     });
-
-    // Subscribe to received messages
-    receivedUnsubscribe = onSnapshot(receivedMessagesQuery, (snapshot) => {
-      const receivedMessages = snapshot.docs;
-      allMessages = [...allMessages.filter(msg => msg.data().senderId === currentUserId), ...receivedMessages];
-      processConversations();
-    }, (error) => {
-      console.error('Error fetching received messages:', error);
-    });
-
-    // Return cleanup function
-    return () => {
-      if (sentUnsubscribe) sentUnsubscribe();
-      if (receivedUnsubscribe) receivedUnsubscribe();
-    };
   },
 
   async searchUsers(searchQuery: string, currentUserId: string): Promise<Conversation[]> {

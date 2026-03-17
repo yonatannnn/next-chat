@@ -11,6 +11,7 @@ import {
   limit,
   query,
 } from "firebase/firestore";
+import { migrationService } from "@/services/migrationService";
 
 type DashboardUser = {
   id: string;
@@ -34,6 +35,8 @@ export default function DashboardPage() {
   const [messagesCount, setMessagesCount] = useState<number | null>(null);
   const [initiators, setInitiators] = useState<InitiatorRecord[]>([]);
   const [loadingData, setLoadingData] = useState(true);
+  const [migrationStatus, setMigrationStatus] = useState<string | null>(null);
+  const [isMigrating, setIsMigrating] = useState(false);
   const adminEmail = useMemo(
     () => process.env.NEXT_PUBLIC_ADMIN_EMAIL?.toLowerCase().trim(),
     []
@@ -119,6 +122,22 @@ export default function DashboardPage() {
     };
   }, [isAllowed]);
 
+  const handleMigration = async () => {
+    if (!isAllowed || isMigrating) return;
+    if (!window.confirm('Run migration to backfill conversation data? This can take a while.')) return;
+    setIsMigrating(true);
+    setMigrationStatus('Running migration...');
+    try {
+      const result = await migrationService.migrateMessagesAndConversations();
+      setMigrationStatus(`Migration complete. Messages updated: ${result.messagesUpdated}, conversations written: ${result.conversationsWritten}`);
+    } catch (error) {
+      console.error('Migration failed', error);
+      setMigrationStatus('Migration failed. Check console for details.');
+    } finally {
+      setIsMigrating(false);
+    }
+  };
+
   if (isLoading) return (
     <div className="p-6 bg-white dark:bg-gray-900 min-h-screen text-gray-900 dark:text-white">Loading...</div>
   );
@@ -138,6 +157,25 @@ export default function DashboardPage() {
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Admin Dashboard</h1>
         <p className="text-gray-600 dark:text-gray-400">Restricted to the configured admin account</p>
       </div>
+
+      <section className="space-y-2">
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Maintenance</h2>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleMigration}
+            disabled={isMigrating}
+            className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60"
+          >
+            {isMigrating ? 'Migrating…' : 'Run Conversation Migration'}
+          </button>
+          {migrationStatus && (
+            <span className="text-sm text-gray-600 dark:text-gray-400">{migrationStatus}</span>
+          )}
+        </div>
+        <p className="text-xs text-gray-500 dark:text-gray-400">
+          This backfills `conversationId` on messages and creates `conversations` documents for fast chat list loading.
+        </p>
+      </section>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800">
@@ -204,5 +242,4 @@ export default function DashboardPage() {
     </div>
   );
 }
-
 

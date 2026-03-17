@@ -24,7 +24,7 @@ class OnlineStatusServiceImpl implements OnlineStatusService {
   private statusChangeCallbacks: Set<(status: UserStatus) => void> = new Set();
   private currentUserId: string | null = null;
 
-  private readonly BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://web-production-ac2a6.up.railway.app';
+  private readonly BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://next-chat-backend-7u70.onrender.com';
 
   connect(userId: string, userData: any) {
     if (this.isConnected && this.currentUserId === userId) {
