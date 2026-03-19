@@ -9,6 +9,8 @@ import {
   writeBatch,
   QueryDocumentSnapshot,
   DocumentData,
+  Query,
+  QuerySnapshot,
   Timestamp,
   setDoc,
 } from 'firebase/firestore';
@@ -52,15 +54,15 @@ export const migrationService = {
     const conversationMap = new Map<string, ConversationAgg>();
 
     while (true) {
-      const q = lastDoc
+      const q: Query<DocumentData> = lastDoc
         ? query(messagesRef, orderBy('timestamp', 'asc'), startAfter(lastDoc), limit(pageSize))
         : query(messagesRef, orderBy('timestamp', 'asc'), limit(pageSize));
 
-      const snapshot = await getDocs(q);
+      const snapshot: QuerySnapshot<DocumentData> = await getDocs(q);
       if (snapshot.empty) break;
 
       const batch = writeBatch(db);
-      snapshot.docs.forEach((docSnap) => {
+      snapshot.docs.forEach((docSnap: QueryDocumentSnapshot<DocumentData>) => {
         const data = docSnap.data() as any;
         const senderId = data.senderId as string | undefined;
         const receiverId = data.receiverId as string | undefined;
