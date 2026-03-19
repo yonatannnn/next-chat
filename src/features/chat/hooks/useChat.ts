@@ -31,6 +31,78 @@ export const useChat = (
   const isLoadingOlderRef = useRef(false);
   const [hasMoreMessages, setHasMoreMessages] = useState(false);
   const subscriptionIdRef = useRef(0);
+  const cacheWriteTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const CACHE_VERSION = 1;
+  const MAX_CACHED_MESSAGES = 350;
+
+  const getCacheKey = (userId: string, otherUserId: string) =>
+    `chat_cache_v${CACHE_VERSION}:${userId}:${otherUserId}`;
+
+  const serializeDate = (value?: Date | null) => (value ? value.toISOString() : null);
+
+  const serializeMessages = (input: Message[]) => {
+    return input.map((m) => ({
+      ...m,
+      timestamp: serializeDate(m.timestamp),
+      editedAt: serializeDate(m.editedAt),
+      seenAt: serializeDate(m.seenAt),
+      expiresAt: serializeDate(m.expiresAt),
+    }));
+  };
+
+  const hydrateDate = (value?: string | null) => (value ? new Date(value) : undefined);
+
+  const hydrateMessages = (input: any[]): Message[] => {
+    return input.map((m) => ({
+      ...m,
+      timestamp: hydrateDate(m.timestamp) || new Date(),
+      editedAt: hydrateDate(m.editedAt),
+      seenAt: hydrateDate(m.seenAt),
+      expiresAt: hydrateDate(m.expiresAt) || null,
+    }));
+  };
+
+  const loadCachedMessages = (userId: string, otherUserId: string): Message[] => {
+    if (typeof window === 'undefined') return [];
+    try {
+      const raw = window.localStorage.getItem(getCacheKey(userId, otherUserId));
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      if (!parsed || !Array.isArray(parsed.messages)) return [];
+      return hydrateMessages(parsed.messages);
+    } catch (error) {
+      console.error('Failed to read message cache:', error);
+      return [];
+    }
+  };
+
+  const saveCachedMessages = (userId: string, otherUserId: string, input: Message[]) => {
+    if (typeof window === 'undefined') return;
+    try {
+      const trimmed = input.slice(-MAX_CACHED_MESSAGES);
+      const payload = {
+        version: CACHE_VERSION,
+        savedAt: Date.now(),
+        messages: serializeMessages(trimmed),
+      };
+      window.localStorage.setItem(getCacheKey(userId, otherUserId), JSON.stringify(payload));
+    } catch (error) {
+      console.error('Failed to write message cache:', error);
+    }
+  };
+
+  const mergeMessages = (existing: Message[], incoming: Message[]) => {
+    if (existing.length === 0) return incoming;
+    const merged = new Map<string, Message>();
+    existing.forEach((m) => merged.set(m.id, m));
+    incoming.forEach((m) => merged.set(m.id, m));
+    return Array.from(merged.values()).sort((a, b) => {
+      const timeA = a.timestamp?.getTime() || 0;
+      const timeB = b.timestamp?.getTime() || 0;
+      return timeA - timeB;
+    });
+  };
 
   useEffect(() => {
     if (!selectedUserId) {
@@ -38,11 +110,17 @@ export const useChat = (
       return;
     }
 
-    // Clear previous conversation messages immediately to avoid stale UI.
-    setMessages([]);
+    const cachedMessages = loadCachedMessages(currentUserId, selectedUserId);
+    if (cachedMessages.length > 0) {
+      setMessages(cachedMessages);
+      setLoading(false);
+    } else {
+      // Clear previous conversation messages immediately to avoid stale UI.
+      setMessages([]);
+      setLoading(true);
+    }
     lastCursorRef.current = null;
     setHasMoreMessages(false);
-    setLoading(true);
     const subscriptionId = ++subscriptionIdRef.current;
     const unsubscribe = chatService.subscribeToMessages(
       currentUserId,
@@ -51,7 +129,11 @@ export const useChat = (
         if (subscriptionIdRef.current !== subscriptionId) {
           return;
         }
-        setMessages(newMessages);
+        const latestMessages = mergeMessages(
+          useChatStore.getState().messages,
+          newMessages
+        );
+        setMessages(latestMessages);
         lastCursorRef.current = cursor;
         setHasMoreMessages(hasMore);
         setLoading(false);
@@ -61,6 +143,23 @@ export const useChat = (
 
     return () => unsubscribe();
   }, [currentUserId, selectedUserId, setMessages, setLoading]);
+
+  useEffect(() => {
+    if (!selectedUserId || !currentUserId) return;
+    if (cacheWriteTimerRef.current) {
+      clearTimeout(cacheWriteTimerRef.current);
+    }
+    cacheWriteTimerRef.current = setTimeout(() => {
+      saveCachedMessages(currentUserId, selectedUserId, messages);
+    }, 300);
+
+    return () => {
+      if (cacheWriteTimerRef.current) {
+        clearTimeout(cacheWriteTimerRef.current);
+        cacheWriteTimerRef.current = null;
+      }
+    };
+  }, [messages, currentUserId, selectedUserId]);
 
   const sendMessage = async (text: string, fileUrl?: string, fileUrls?: string[], replyTo?: any, voiceUrl?: string, voiceDuration?: number, messageType?: 'system', senderName?: string) => {
     if (!selectedUserId) return;

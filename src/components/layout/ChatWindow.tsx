@@ -58,6 +58,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   const [isAtBottom, setIsAtBottom] = useState(true);
   const [isExpirationSelectorOpen, setIsExpirationSelectorOpen] = useState(false);
   const [currentExpiration, setCurrentExpiration] = useState<number | null>(null);
+  const skipNextAutoScrollRef = useRef(false);
 
   // Helper function to format expiration time
   const formatExpirationTime = (minutes: number): string => {
@@ -433,6 +434,10 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   // Additional effect to ensure scroll to bottom when switching chats
   useEffect(() => {
     if ((selectedUserId || selectedGroupId) && messages.length > 0 && !isSearchOpen) {
+      if (skipNextAutoScrollRef.current) {
+        skipNextAutoScrollRef.current = false;
+        return;
+      }
       // Small delay to ensure DOM is updated
       setTimeout(() => {
         const messagesContainer = document.querySelector('.messages-container');
@@ -442,6 +447,26 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       }, 100);
     }
   }, [selectedUserId, selectedGroupId, messages.length, isSearchOpen]);
+
+  const handleLoadOlderMessages = async () => {
+    const messagesContainer = document.querySelector('.messages-container');
+    let previousScrollHeight = 0;
+    let previousScrollTop = 0;
+
+    if (messagesContainer) {
+      previousScrollHeight = messagesContainer.scrollHeight;
+      previousScrollTop = messagesContainer.scrollTop;
+    }
+
+    skipNextAutoScrollRef.current = true;
+    await loadOlderMessages();
+
+    if (messagesContainer) {
+      const newScrollHeight = messagesContainer.scrollHeight;
+      const heightDiff = newScrollHeight - previousScrollHeight;
+      messagesContainer.scrollTop = previousScrollTop + heightDiff;
+    }
+  };
 
   const handleSendMessage = async (text: string, fileUrl?: string, fileUrls?: string[], replyTo?: any) => {
     if (selectedUserId) {
@@ -845,10 +870,10 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
 
       {/* Messages - Scrollable */}
       <div className="messages-container flex-1 overflow-y-auto min-h-0 p-3 md:p-4 space-y-3 md:space-y-4 pt-4 md:pt-4 overflow-x-hidden bg-white dark:bg-gray-900">
-        {selectedUserId && hasMoreMessages && (
+            {selectedUserId && hasMoreMessages && (
           <div className="flex justify-center">
             <button
-              onClick={loadOlderMessages}
+              onClick={handleLoadOlderMessages}
               className="text-xs px-3 py-1 rounded-full border border-gray-300 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
             >
               Load older messages
