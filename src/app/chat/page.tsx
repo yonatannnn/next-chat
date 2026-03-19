@@ -522,3 +522,11 @@ function ChatPageContent() {
     </div>
   );
 }
+
+export default function ChatPage() {
+  return (
+    <Suspense fallback={<ChatPageFallback />}>
+      <ChatPageContent />
+    </Suspense>
+  );
+}
