@@ -14,7 +14,11 @@ export const metadata: Metadata = {
   title: "Next Chat - Real-time Chat Application",
   description: "A modern real-time chat application built with Next.js, Firebase, and Supabase",
   icons: {
-    icon: "/icons/icon.svg",
+    icon: [
+      { url: "/favicon.svg", type: "image/svg+xml" },
+      { url: "/icons/icon.svg", type: "image/svg+xml" },
+      { url: "/favicon.ico" },
+    ],
     apple: "/icons/icon-192x192.png",
   },
   manifest: "/manifest.json",

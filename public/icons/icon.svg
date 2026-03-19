@@ -1,8 +1,10 @@
-<svg width="192" height="192" viewBox="0 0 192 192" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect width="192" height="192" rx="24" fill="#3B82F6"/>
-  <path d="M48 64C48 50.7452 58.7452 40 72 40H120C133.255 40 144 50.7452 144 64V128C144 141.255 133.255 152 120 152H72C58.7452 152 48 141.255 48 64Z" fill="white"/>
-  <path d="M64 80C64 72.268 70.268 66 78 66H114C121.732 66 128 72.268 128 80V112C128 119.732 121.732 126 114 126H78C70.268 126 64 119.732 64 112V80Z" fill="#3B82F6"/>
-  <circle cx="84" cy="96" r="4" fill="white"/>
-  <circle cx="108" cy="96" r="4" fill="white"/>
-  <path d="M84 108C84 104.686 86.6863 102 90 102H102C105.314 102 108 104.686 108 108V110C108 113.314 105.314 116 102 116H90C86.6863 116 84 113.314 84 110V108Z" fill="white"/>
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Message icon dotted outline">
+  <rect x="24" y="24" width="464" height="464" rx="110" fill="#2563EB"/>
+  <path d="M186 122H326C358 122 384 148 384 180V268C384 300 358 326 326 326H248L188 382V326H186C154 326 128 300 128 268V180C128 148 154 122 186 122Z"
+    fill="none"
+    stroke="#FFFFFF"
+    stroke-width="20"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    stroke-dasharray="1 26"/>
 </svg>

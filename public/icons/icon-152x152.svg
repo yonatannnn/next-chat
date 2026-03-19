@@ -1,5 +1,10 @@
-
-<svg width="152" height="152" viewBox="0 0 152 152" xmlns="http://www.w3.org/2000/svg">
-  <rect width="152" height="152" fill="#3b82f6" rx="30.400000000000002"/>
-  <text x="50%" y="50%" text-anchor="middle" dy="0.35em" font-family="Arial, sans-serif" font-size="60.800000000000004" font-weight="bold" fill="white">💬</text>
+<svg width="152" height="152" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Message icon dotted outline">
+  <rect x="24" y="24" width="464" height="464" rx="110" fill="#2563EB"/>
+  <path d="M186 122H326C358 122 384 148 384 180V268C384 300 358 326 326 326H248L188 382V326H186C154 326 128 300 128 268V180C128 148 154 122 186 122Z"
+    fill="none"
+    stroke="#FFFFFF"
+    stroke-width="20"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    stroke-dasharray="1 26"/>
 </svg>

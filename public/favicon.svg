@@ -1,4 +1,4 @@
-<svg width="144" height="144" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Message icon dotted outline">
+<svg width="64" height="64" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Message icon dotted outline">
   <rect x="24" y="24" width="464" height="464" rx="110" fill="#2563EB"/>
   <path d="M186 122H326C358 122 384 148 384 180V268C384 300 358 326 326 326H248L188 382V326H186C154 326 128 300 128 268V180C128 148 154 122 186 122Z"
     fill="none"
