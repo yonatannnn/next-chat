@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useChatStore, Message } from '../store/chatStore';
 import { chatService } from '../services/chatService';
+import { useUsersStore } from '@/features/users/store/usersStore';
 
 type UserProfile = {
   username?: string;
@@ -168,11 +169,26 @@ export const useChat = (
       // Get expiration setting for this conversation
       const conversation = conversations.find(conv => conv.userId === selectedUserId);
       const expirationMinutes = conversation?.expirationMinutes || null;
-      const receiverProfile = conversation ? {
-        username: conversation.username,
-        email: conversation.email,
-        avatar: conversation.avatar,
-      } : undefined;
+      let receiverProfile = conversation
+        ? {
+            username: conversation.username,
+            email: conversation.email,
+            avatar: conversation.avatar,
+          }
+        : undefined;
+
+      if (!receiverProfile || receiverProfile.username === 'Unknown') {
+        const fallbackUser = useUsersStore.getState().users.find(
+          (user) => user.id === selectedUserId
+        );
+        if (fallbackUser) {
+          receiverProfile = {
+            username: fallbackUser.username,
+            email: fallbackUser.email,
+            avatar: fallbackUser.avatar,
+          };
+        }
+      }
       
       console.log(`Sending message to ${selectedUserId} with expiration: ${expirationMinutes} minutes`);
       

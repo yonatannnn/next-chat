@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useEffect, useRef, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { ChatWindow } from '@/components/layout/ChatWindow';
 import { useAuth } from '@/features/auth/hooks/useAuth';
@@ -15,15 +15,18 @@ import { DropdownMenu } from '@/components/ui/DropdownMenu';
 import { Avatar } from '@/components/ui/Avatar';
 import { ChatInfoModal } from '@/components/ui/ChatInfoModal';
 import { Menu, X, Info, Users, Trash2, Search, EyeOff, Lock, AlertTriangle, Clock } from 'lucide-react';
+import { collection, doc, getDoc, getDocs, limit, query, where } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
 
 export default function ChatPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, userData, isLoading } = useAuth();
   const { users } = useUsers(userData?.id || '');
-  const { selectedUserId, selectedGroupId, conversations, groupConversations, setSelectedUserId, setSelectedGroupId, hideConversation, hardHideConversation } = useChatStore();
+  const { selectedUserId, selectedGroupId, conversations, groupConversations, setSelectedUserId, setSelectedGroupId, hideConversation, hardHideConversation, addConversation } = useChatStore();
   const { messages } = useChat(
     userData?.id || '',
     selectedUserId,
@@ -33,6 +36,8 @@ export default function ChatPage() {
   const [isChatInfoOpen, setIsChatInfoOpen] = useState(false);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [showHardHideConfirm, setShowHardHideConfirm] = useState(false);
+  const requestedUserId = searchParams?.get('user') ?? null;
+  const lastHandledUserRef = useRef<string | null>(null);
   
   // Initialize online status tracking
   const { isOnline, allStatuses } = useOnlineStatus(userData?.id);
@@ -87,6 +92,106 @@ export default function ChatPage() {
       router.push('/login');
     }
   }, [user, isLoading, router]);
+
+  useEffect(() => {
+    if (!requestedUserId || !userData?.id) return;
+    if (requestedUserId === userData.id) return;
+    if (lastHandledUserRef.current === requestedUserId) return;
+
+    const existingConversation = conversations.find(
+      (conversation) => conversation.userId === requestedUserId
+    );
+    if (existingConversation) {
+      lastHandledUserRef.current = requestedUserId;
+      setSelectedUserId(requestedUserId);
+      setSelectedGroupId(null);
+      return;
+    }
+
+    const userFromList = users.find((u) => u.id === requestedUserId);
+    if (userFromList) {
+      addConversation({
+        id: userFromList.id,
+        userId: userFromList.id,
+        username: userFromList.username,
+        email: userFromList.email,
+        avatar: userFromList.avatar,
+        lastMessage: '',
+        lastMessageTime: new Date(),
+        unreadCount: 0,
+        isOnline: true,
+      });
+      lastHandledUserRef.current = requestedUserId;
+      setSelectedUserId(requestedUserId);
+      setSelectedGroupId(null);
+      return;
+    }
+
+    let cancelled = false;
+    const fetchUser = async () => {
+      if (!db) return;
+      try {
+        const directDoc = await getDoc(doc(db, 'users', requestedUserId));
+        if (!cancelled && directDoc.exists()) {
+          const data = directDoc.data() as any;
+          addConversation({
+            id: requestedUserId,
+            userId: requestedUserId,
+            username: data.username || 'Unknown',
+            email: data.email || '',
+            avatar: data.avatar,
+            lastMessage: '',
+            lastMessageTime: new Date(),
+            unreadCount: 0,
+            isOnline: true,
+          });
+          lastHandledUserRef.current = requestedUserId;
+          setSelectedUserId(requestedUserId);
+          setSelectedGroupId(null);
+          return;
+        }
+
+        const fallbackQuery = query(
+          collection(db, 'users'),
+          where('id', '==', requestedUserId),
+          limit(1)
+        );
+        const fallbackSnap = await getDocs(fallbackQuery);
+        if (!cancelled && !fallbackSnap.empty) {
+          const data = fallbackSnap.docs[0].data() as any;
+          addConversation({
+            id: requestedUserId,
+            userId: requestedUserId,
+            username: data.username || 'Unknown',
+            email: data.email || '',
+            avatar: data.avatar,
+            lastMessage: '',
+            lastMessageTime: new Date(),
+            unreadCount: 0,
+            isOnline: true,
+          });
+          lastHandledUserRef.current = requestedUserId;
+          setSelectedUserId(requestedUserId);
+          setSelectedGroupId(null);
+        }
+      } catch (error) {
+        console.error('Failed to load user for start chat:', error);
+      }
+    };
+
+    fetchUser();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    requestedUserId,
+    userData?.id,
+    users,
+    conversations,
+    addConversation,
+    setSelectedUserId,
+    setSelectedGroupId,
+  ]);
 
   // On mobile: show sidebar by default, hide when chat is selected
   useEffect(() => {

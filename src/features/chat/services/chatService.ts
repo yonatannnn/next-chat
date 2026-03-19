@@ -127,7 +127,7 @@ export const chatService = {
 
       let resolvedReceiverProfile = receiverProfile;
       if (!resolvedReceiverProfile) {
-        resolvedReceiverProfile = await fetchUserProfile(receiverId);
+        resolvedReceiverProfile = (await fetchUserProfile(receiverId)) ?? undefined;
       }
 
       const receiverProfileData = resolvedReceiverProfile

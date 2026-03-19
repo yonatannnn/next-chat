@@ -165,22 +165,26 @@ export const useChatStore = create<ChatState>((set) => ({
     const existingConversationsMap = new Map(
       state.conversations.map(conv => [conv.userId, conv])
     );
-    
-    // Update conversations while preserving hidden/hardHidden states
-    const updatedConversations = newConversations.map(newConv => {
+    const serverUserIds = new Set(newConversations.map((c) => c.userId));
+
+    // Update conversations from server while preserving hidden/hardHidden states
+    const updatedConversations = newConversations.map((newConv) => {
       const existingConv = existingConversationsMap.get(newConv.userId);
       if (existingConv) {
-        // Preserve hidden and hardHidden states from existing conversation
         return {
           ...newConv,
           hidden: existingConv.hidden,
-          hardHidden: existingConv.hardHidden
+          hardHidden: existingConv.hardHidden,
         };
       }
       return newConv;
     });
-    
-    return { conversations: updatedConversations };
+
+    // Keep locally-added conversations (e.g. from "Start chat" with a user that has no conversation doc yet)
+    const localOnly = state.conversations.filter((conv) => !serverUserIds.has(conv.userId));
+    const merged = [...updatedConversations, ...localOnly];
+
+    return { conversations: merged };
   }),
   addConversation: (conversation) => set((state) => {
     // Check if conversation already exists
