@@ -16,7 +16,8 @@ import {
   startAfter,
   QueryDocumentSnapshot,
   DocumentData,
-  Query
+  Query,
+  getDoc
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Message } from '../store/chatStore';
@@ -92,13 +93,59 @@ export const chatService = {
         email: senderProfile?.email || null,
         avatar: senderProfile?.avatar || null,
       };
-      const receiverProfileData = receiverProfile
+
+      const fetchUserProfile = async (userId: string) => {
+        try {
+          const directDoc = await getDoc(doc(db!, 'users', userId));
+          if (directDoc.exists()) {
+            const data = directDoc.data() as any;
+            return {
+              username: data.username,
+              email: data.email,
+              avatar: data.avatar,
+            };
+          }
+          const fallbackQuery = query(
+            collection(db!, 'users'),
+            where('id', '==', userId),
+            limit(1)
+          );
+          const fallbackSnap = await getDocs(fallbackQuery);
+          if (!fallbackSnap.empty) {
+            const data = fallbackSnap.docs[0].data() as any;
+            return {
+              username: data.username,
+              email: data.email,
+              avatar: data.avatar,
+            };
+          }
+        } catch (error) {
+          console.warn('Failed to fetch user profile:', error);
+        }
+        return null;
+      };
+
+      let resolvedReceiverProfile = receiverProfile;
+      if (!resolvedReceiverProfile) {
+        resolvedReceiverProfile = await fetchUserProfile(receiverId);
+      }
+
+      const receiverProfileData = resolvedReceiverProfile
         ? {
-            username: receiverProfile.username || 'Unknown',
-            email: receiverProfile.email || null,
-            avatar: receiverProfile.avatar || null,
+            username: resolvedReceiverProfile.username || 'Unknown',
+            email: resolvedReceiverProfile.email || null,
+            avatar: resolvedReceiverProfile.avatar || null,
           }
         : null;
+
+      const conversationSnapshot = await getDoc(conversationRef);
+      const existingConversation = conversationSnapshot.exists()
+        ? (conversationSnapshot.data() as any)
+        : null;
+
+      const existingUnreadCounts = existingConversation?.unreadCounts || {};
+      const existingLastReadAt = existingConversation?.lastReadAt || {};
+      const existingProfiles = existingConversation?.profiles || {};
 
       const conversationUpdate: Record<string, unknown> = {
         participants: [senderId, receiverId],
@@ -106,15 +153,21 @@ export const chatService = {
         lastMessageAt: serverTimestamp(),
         lastSenderId: senderId,
         updatedAt: serverTimestamp(),
-        [`unreadCounts.${receiverId}`]: increment(1),
-        [`unreadCounts.${senderId}`]: 0,
-        [`lastReadAt.${senderId}`]: serverTimestamp(),
-        [`profiles.${senderId}`]: senderProfileData,
+        unreadCounts: {
+          ...existingUnreadCounts,
+          [senderId]: 0,
+          [receiverId]: increment(1),
+        },
+        lastReadAt: {
+          ...existingLastReadAt,
+          [senderId]: serverTimestamp(),
+        },
+        profiles: {
+          ...existingProfiles,
+          [senderId]: senderProfileData,
+          ...(receiverProfileData ? { [receiverId]: receiverProfileData } : {}),
+        },
       };
-
-      if (receiverProfileData) {
-        conversationUpdate[`profiles.${receiverId}`] = receiverProfileData;
-      }
 
       batch.set(conversationRef, conversationUpdate, { merge: true });
 
