@@ -31,15 +31,18 @@ export const Sidebar: React.FC = () => {
   const handleLogoutCancel = () => {
     setShowLogoutConfirm(false);
   };
+  const [activeTab, setActiveTab] = useState<'chats' | 'groups'>('chats');
   const { conversations, searchUsers, markAsRead, markAsSeen } = useConversations(userData?.id || '');
-  const { groupConversations, markGroupAsRead, markGroupAsSeen } = useGroupConversations(userData?.id || '');
+  const { groupConversations, markGroupAsRead, markGroupAsSeen } = useGroupConversations(
+    userData?.id || '',
+    { subscribe: activeTab === 'groups' }
+  );
   const { allStatuses } = useOnlineStatus(userData?.id);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isNotificationSettingsOpen, setIsNotificationSettingsOpen] = useState(false);
   const [isCreateGroupOpen, setIsCreateGroupOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'chats' | 'groups'>('chats');
   const [isNavigatingToSettings, setIsNavigatingToSettings] = useState(false);
   const [showHidden, setShowHidden] = useState(false);
   const [avatarClickCount, setAvatarClickCount] = useState(0);

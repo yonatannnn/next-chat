@@ -28,16 +28,20 @@ export const improvedConversationService = {
     );
 
     let settingsMapPromise: Promise<Map<string, number | null>> | null = null;
-    const getSettingsMap = () => {
+    let settingsMapCache: Map<string, number | null> | null = null;
+    let lastSnapshotVersion = 0;
+
+    const getSettingsMap = async () => {
+      if (settingsMapCache) return settingsMapCache;
       if (!settingsMapPromise) {
         settingsMapPromise = conversationSettingsService.getAllConversationSettings(currentUserId);
       }
-      return settingsMapPromise;
+      settingsMapCache = await settingsMapPromise;
+      return settingsMapCache;
     };
 
-    const mapSnapshot = async (snapshot: QuerySnapshot<DocumentData>) => {
-      const settingsMap = await getSettingsMap();
-      const conversations: Conversation[] = snapshot.docs.map((docSnap) => {
+    const buildConversations = (snapshot: QuerySnapshot<DocumentData>, settingsMap?: Map<string, number | null>) => {
+      return snapshot.docs.map((docSnap) => {
         const data = docSnap.data();
         const participants: string[] = data.participants || [];
         const peerId = participants.find((id) => id !== currentUserId);
@@ -64,11 +68,30 @@ export const improvedConversationService = {
           lastMessageSeen: unreadCount === 0,
           unreadCount,
           isOnline: true,
-          expirationMinutes: settingsMap.get(peerId) ?? null,
+          expirationMinutes: settingsMap?.get(peerId) ?? null,
         } as Conversation;
       }).filter(Boolean) as Conversation[];
+    };
 
-      callback(conversations);
+    const mapSnapshot = async (snapshot: QuerySnapshot<DocumentData>) => {
+      const snapshotVersion = ++lastSnapshotVersion;
+
+      // Render immediately with whatever we have in cache (or without settings).
+      const baseConversations = buildConversations(snapshot, settingsMapCache || undefined);
+      callback(baseConversations);
+
+      // Hydrate expiration settings in the background without blocking initial render.
+      if (!settingsMapCache) {
+        getSettingsMap()
+          .then((settingsMap) => {
+            if (snapshotVersion !== lastSnapshotVersion) return;
+            const hydrated = buildConversations(snapshot, settingsMap);
+            callback(hydrated);
+          })
+          .catch((error) => {
+            console.error('Error loading conversation settings:', error);
+          });
+      }
     };
 
     return onSnapshot(q, (snapshot) => {

@@ -38,7 +38,10 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   const { userData } = useAuthStore();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { markAsSeen } = useConversations(userData?.id || '');
-  const { markGroupAsRead, markGroupAsSeen } = useGroupConversations(userData?.id || '');
+  const { markGroupAsRead, markGroupAsSeen } = useGroupConversations(
+    userData?.id || '',
+    { subscribe: false }
+  );
   const { recommendations, acceptRecommendation, rejectRecommendation, deleteRecommendation } = useRecommendations(userData?.id || '');
   
   // Search functionality

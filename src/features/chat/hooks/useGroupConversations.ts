@@ -2,7 +2,14 @@ import { useEffect, useRef } from 'react';
 import { useChatStore } from '../store/chatStore';
 import { groupChatService } from '../services/groupChatService';
 
-export const useGroupConversations = (currentUserId: string) => {
+interface UseGroupConversationsOptions {
+  subscribe?: boolean;
+}
+
+export const useGroupConversations = (
+  currentUserId: string,
+  options: UseGroupConversationsOptions = {}
+) => {
   const { 
     groupConversations, 
     setGroupConversations, 
@@ -13,9 +20,10 @@ export const useGroupConversations = (currentUserId: string) => {
   } = useChatStore();
   
   const isSubscribed = useRef(false);
+  const { subscribe = true } = options;
 
   useEffect(() => {
-    if (!currentUserId) return;
+    if (!currentUserId || !subscribe) return;
 
     setLoading(true);
     isSubscribed.current = true;
@@ -38,7 +46,7 @@ export const useGroupConversations = (currentUserId: string) => {
       }
       isSubscribed.current = false;
     };
-  }, [currentUserId, setGroupConversations, setLoading]);
+  }, [currentUserId, setGroupConversations, setLoading, subscribe]);
 
   const markGroupAsRead = (groupId: string) => {
     useChatStore.getState().markGroupAsRead(groupId);
