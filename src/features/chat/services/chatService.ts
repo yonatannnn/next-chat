@@ -15,7 +15,8 @@ import {
   increment,
   startAfter,
   QueryDocumentSnapshot,
-  DocumentData
+  DocumentData,
+  Query
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Message } from '../store/chatStore';
@@ -406,7 +407,7 @@ export const chatService = {
       const pageSize = 400;
 
       while (true) {
-        const q = lastDoc
+        const q: Query<DocumentData> = lastDoc
           ? query(
               messagesRef,
               where('conversationId', '==', conversationId),
