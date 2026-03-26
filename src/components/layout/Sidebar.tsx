@@ -12,6 +12,7 @@ import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { LogOut, MessageCircle, Settings, Search, X, Bell, Users, Plus, Eye, EyeOff, Archive, AlertTriangle, Lock, Clock } from 'lucide-react';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { useTheme } from '@/contexts/ThemeContext';
+import { ConversationSkeleton } from '@/components/ui/Skeleton';
 
 export const Sidebar: React.FC = () => {
   const router = useRouter();
@@ -311,10 +312,7 @@ export const Sidebar: React.FC = () => {
           </div>
           <div className="space-y-1 md:space-y-2">
             {isSearching ? (
-              <div className="flex items-center justify-center py-6 md:py-8">
-                <div className="animate-spin rounded-full h-5 w-5 md:h-6 md:w-6 border-b-2 border-blue-600"></div>
-                <span className="ml-2 text-gray-500 dark:text-gray-400 text-sm">Searching...</span>
-              </div>
+              <ConversationSkeleton count={4} />
             ) : displayList.length === 0 ? (
               <div className="text-center py-6 md:py-8">
                 <p className="text-gray-500 dark:text-gray-400 text-sm">

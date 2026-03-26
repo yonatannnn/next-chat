@@ -243,7 +243,7 @@ function ChatPageContent() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, [selectedUserId, selectedGroupId, setSelectedUserId, setSelectedGroupId]);
 
-  if (isLoading) {
+  if (isLoading && !isOptimistic && !userData) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="text-center">

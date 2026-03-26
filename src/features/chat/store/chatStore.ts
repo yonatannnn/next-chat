@@ -29,6 +29,9 @@ export interface Message {
   expiresAt?: Date | null;
   expirationMinutes?: number | null;
   isExpired?: boolean;
+  // Optimistic send status
+  status?: 'sending' | 'sent' | 'failed';
+  clientId?: string;
 }
 
 export interface Conversation {

@@ -38,7 +38,8 @@ export const chatService = {
     senderName?: string,
     expirationMinutes?: number | null,
     senderProfile?: { username?: string; email?: string; avatar?: string },
-    receiverProfile?: { username?: string; email?: string; avatar?: string }
+    receiverProfile?: { username?: string; email?: string; avatar?: string },
+    clientId?: string
   ) {
     if (!db) {
       throw new Error('Firebase not initialized');
@@ -74,6 +75,7 @@ export const chatService = {
         expiresAt: expiresAt,
         expirationMinutes: expirationMinutes || null,
         isExpired: false,
+        ...(clientId ? { clientId } : {}),
       };
       const batch = writeBatch(db);
       const messageRef = doc(collection(db, 'messages'));
@@ -256,6 +258,7 @@ export const chatService = {
             expiresAt: data.expiresAt?.toDate() || null,
             expirationMinutes: data.expirationMinutes || null,
             isExpired: data.isExpired || false,
+            clientId: data.clientId || undefined,
           };
         })
         .reverse();
