@@ -1,7 +1,48 @@
 import { useEffect } from 'react';
 import { useAuthStore } from '../store/authStore';
 import { authService } from '../services/authService';
-import { pushNotificationService } from '@/services/pushNotificationService';
+
+let hasInitializedAuthListener = false;
+
+const initializeAuthListener = () => {
+  if (hasInitializedAuthListener) {
+    return;
+  }
+
+  hasInitializedAuthListener = true;
+
+  // Hydrate cached auth data on client before Firebase responds
+  useAuthStore.getState().hydrateFromCache();
+
+  authService.onAuthStateChanged(async (firebaseUser) => {
+    const state = useAuthStore.getState();
+    const { setUser, setUserData, setLoading, setError } = state;
+
+    if (firebaseUser) {
+      setUser(firebaseUser);
+
+      try {
+        const currentUserData = useAuthStore.getState().userData;
+        if (currentUserData?.id === firebaseUser.uid) {
+          // Cached data matches — just confirm and stop loading
+          useAuthStore.setState({ isOptimistic: false, isLoading: false });
+          return;
+        }
+
+        const userData = await authService.getUserData(firebaseUser.uid);
+        setUserData(userData);
+      } catch (error: unknown) {
+        setError(error instanceof Error ? error.message : 'An error occurred');
+      }
+    } else {
+      // Firebase says not authenticated — revert optimistic state
+      setUser(null);
+      setUserData(null); // This also clears the localStorage cache
+    }
+
+    useAuthStore.setState({ isOptimistic: false, isLoading: false });
+  });
+};
 
 export const useAuth = () => {
   const { 
@@ -17,24 +58,8 @@ export const useAuth = () => {
   } = useAuthStore();
 
   useEffect(() => {
-    const unsubscribe = authService.onAuthStateChanged(async (firebaseUser) => {
-      if (firebaseUser) {
-        setUser(firebaseUser);
-        try {
-          const userData = await authService.getUserData(firebaseUser.uid);
-          setUserData(userData);
-        } catch (error: unknown) {
-          setError(error instanceof Error ? error.message : 'An error occurred');
-        }
-      } else {
-        setUser(null);
-        setUserData(null);
-      }
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, [setUser, setUserData, setLoading, setError]);
+    initializeAuthListener();
+  }, []);
 
   const register = async (email: string, password: string, username: string, name?: string, avatar?: string) => {
     setLoading(true);
@@ -59,6 +84,21 @@ export const useAuth = () => {
       setUserData(userData);
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : 'An error occurred');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loginWithGoogle = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const { user, userData } = await authService.signInWithGoogle();
+      setUser(user);
+      setUserData(userData);
+    } catch (error: unknown) {
+      setError(error instanceof Error ? error.message : 'An error occurred');
+      throw error;
     } finally {
       setLoading(false);
     }
@@ -124,6 +164,7 @@ export const useAuth = () => {
     setUserData,
     register,
     login,
+    loginWithGoogle,
     logout: handleLogout,
   };
 };

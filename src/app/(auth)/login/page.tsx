@@ -7,6 +7,7 @@ import { useForm } from 'react-hook-form';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { useAuth } from '@/features/auth/hooks/useAuth';
+import { Chrome } from 'lucide-react';
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
@@ -18,7 +19,7 @@ interface LoginForm {
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, isLoading, error } = useAuth();
+  const { login, loginWithGoogle, isLoading, error } = useAuth();
   const { register, handleSubmit, formState: { errors } } = useForm<LoginForm>({
     mode: 'onBlur',
     reValidateMode: 'onChange'
@@ -27,6 +28,15 @@ export default function LoginPage() {
   const onSubmit = async (data: LoginForm) => {
     try {
       await login(data.email, data.password);
+      router.push('/chat');
+    } catch {
+      // Error is handled by the useAuth hook
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    try {
+      await loginWithGoogle();
       router.push('/chat');
     } catch {
       // Error is handled by the useAuth hook
@@ -90,6 +100,28 @@ export default function LoginPage() {
             Sign in
           </Button>
         </form>
+
+        <div className="space-y-4">
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t border-gray-300 dark:border-gray-700" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-gray-50 px-2 text-gray-500 dark:bg-gray-900 dark:text-gray-400">Or continue with</span>
+            </div>
+          </div>
+
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full"
+            onClick={handleGoogleLogin}
+            disabled={isLoading}
+          >
+            <Chrome size={16} className="mr-2" />
+            Google
+          </Button>
+        </div>
       </div>
     </div>
   );

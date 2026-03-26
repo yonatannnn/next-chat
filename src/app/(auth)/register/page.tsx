@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/Input';
 import { Avatar } from '@/components/ui/Avatar';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { authService } from '@/features/auth/services/authService';
-import { Camera, Loader2 } from 'lucide-react';
+import { Camera, Chrome, Loader2 } from 'lucide-react';
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
@@ -24,7 +24,7 @@ interface RegisterForm {
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { register: registerUser, isLoading, error } = useAuth();
+  const { register: registerUser, loginWithGoogle, isLoading, error } = useAuth();
   const { register, handleSubmit, watch, formState: { errors } } = useForm<RegisterForm>({
     mode: 'onBlur',
     reValidateMode: 'onChange'
@@ -85,6 +85,15 @@ export default function RegisterPage() {
       router.push('/chat');
     } catch (error) {
       console.error('Registration error:', error);
+      // Error is handled by the useAuth hook
+    }
+  };
+
+  const handleGoogleSignup = async () => {
+    try {
+      await loginWithGoogle();
+      router.push('/chat');
+    } catch {
       // Error is handled by the useAuth hook
     }
   };
@@ -206,6 +215,28 @@ export default function RegisterPage() {
             Create account
           </Button>
         </form>
+
+        <div className="space-y-4">
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t border-gray-300 dark:border-gray-700" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-gray-50 px-2 text-gray-500 dark:bg-gray-900 dark:text-gray-400">Or continue with</span>
+            </div>
+          </div>
+
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full"
+            onClick={handleGoogleSignup}
+            disabled={isLoading}
+          >
+            <Chrome size={16} className="mr-2" />
+            Google
+          </Button>
+        </div>
 
         {/* Hidden file input */}
         <input

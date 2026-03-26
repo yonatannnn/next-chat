@@ -3,6 +3,8 @@ import {
   signInWithEmailAndPassword, 
   signOut, 
   onAuthStateChanged,
+  GoogleAuthProvider,
+  signInWithPopup,
   User 
 } from 'firebase/auth';
 import { doc, setDoc, getDoc, updateDoc, serverTimestamp, collection, query, where, getDocs } from 'firebase/firestore';
@@ -18,6 +20,50 @@ export interface UserData {
   avatar?: string;
   password?: string; // Store hashed password for reference
 }
+
+const googleProvider = new GoogleAuthProvider();
+googleProvider.setCustomParameters({
+  prompt: 'select_account',
+});
+
+const sanitizeUsername = (value: string) =>
+  value
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '')
+    .slice(0, 20);
+
+const generateUsernameCandidates = (user: User) => {
+  const emailBase = user.email?.split('@')[0] || '';
+  const displayBase = user.displayName || '';
+  const candidates = [
+    sanitizeUsername(displayBase),
+    sanitizeUsername(emailBase),
+    sanitizeUsername(`${displayBase}${emailBase}`),
+    sanitizeUsername(`user${user.uid.slice(0, 8)}`),
+  ].filter((value, index, list) => value.length >= 3 && list.indexOf(value) === index);
+
+  return candidates.length > 0 ? candidates : [`user${user.uid.slice(0, 8)}`];
+};
+
+const getUniqueUsername = async (user: User) => {
+  if (!db) {
+    throw new Error('Firebase not initialized');
+  }
+
+  const candidates = generateUsernameCandidates(user);
+
+  for (const candidate of candidates) {
+    const usersRef = collection(db, 'users');
+    const q = query(usersRef, where('username', '==', candidate));
+    const querySnapshot = await getDocs(q);
+
+    if (querySnapshot.empty || querySnapshot.docs.every((docItem) => docItem.id === user.uid)) {
+      return candidate;
+    }
+  }
+
+  return `user${user.uid.slice(0, 8)}`;
+};
 
 export const authService = {
   async register(email: string, password: string, username: string, name?: string, avatar?: string) {
@@ -83,6 +129,51 @@ export const authService = {
       }
       
       throw new Error('An unexpected error occurred during login');
+    }
+  },
+
+  async signInWithGoogle() {
+    if (!auth || !db) {
+      throw new Error('Firebase not initialized');
+    }
+
+    try {
+      const userCredential = await signInWithPopup(auth, googleProvider);
+      const user = userCredential.user;
+      const userRef = doc(db, 'users', user.uid);
+      const userDoc = await getDoc(userRef);
+
+      if (!userDoc.exists()) {
+        const username = await getUniqueUsername(user);
+        const userData: UserData = {
+          id: user.uid,
+          username,
+          email: user.email || '',
+          name: user.displayName || '',
+          avatar: user.photoURL || '',
+        };
+
+        await setDoc(userRef, userData);
+        return { user, userData };
+      }
+
+      return { user, userData: userDoc.data() as UserData };
+    } catch (error: unknown) {
+      console.error('Google sign-in error:', error);
+
+      if (error instanceof Error) {
+        if (error.message.includes('auth/popup-closed-by-user')) {
+          throw new Error('Google sign-in was cancelled');
+        } else if (error.message.includes('auth/popup-blocked')) {
+          throw new Error('Popup was blocked. Please allow popups and try again');
+        } else if (error.message.includes('auth/account-exists-with-different-credential')) {
+          throw new Error('An account already exists with this email using a different sign-in method');
+        }
+
+        throw new Error(error.message);
+      }
+
+      throw new Error('An unexpected error occurred during Google sign-in');
     }
   },
 
