@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useChatStore, Message } from '../store/chatStore';
 import { chatService } from '../services/chatService';
 import { useUsersStore } from '@/features/users/store/usersStore';
@@ -81,7 +81,8 @@ export const useChat = (
   const saveCachedMessages = (userId: string, otherUserId: string, input: Message[]) => {
     if (typeof window === 'undefined') return;
     try {
-      const trimmed = input.slice(-MAX_CACHED_MESSAGES);
+      // Filter out unsent optimistic messages to avoid stale state on reload
+      const trimmed = input.filter(m => m.status !== 'sending' && m.status !== 'failed').slice(-MAX_CACHED_MESSAGES);
       const payload = {
         version: CACHE_VERSION,
         savedAt: Date.now(),
@@ -96,8 +97,20 @@ export const useChat = (
   const mergeMessages = (existing: Message[], incoming: Message[]) => {
     if (existing.length === 0) return incoming;
     const merged = new Map<string, Message>();
-    existing.forEach((m) => merged.set(m.id, m));
-    incoming.forEach((m) => merged.set(m.id, m));
+    // Build a clientId lookup from existing optimistic messages
+    const clientIdMap = new Map<string, string>();
+    existing.forEach((m) => {
+      merged.set(m.id, m);
+      if (m.clientId) clientIdMap.set(m.clientId, m.id);
+    });
+    incoming.forEach((m) => {
+      // If server message has a clientId matching an optimistic message, replace it
+      if (m.clientId && clientIdMap.has(m.clientId)) {
+        const tempId = clientIdMap.get(m.clientId)!;
+        merged.delete(tempId);
+      }
+      merged.set(m.id, { ...m, status: 'sent' });
+    });
     return Array.from(merged.values()).sort((a, b) => {
       const timeA = a.timestamp?.getTime() || 0;
       const timeB = b.timestamp?.getTime() || 0;
@@ -164,7 +177,33 @@ export const useChat = (
 
   const sendMessage = async (text: string, fileUrl?: string, fileUrls?: string[], replyTo?: any, voiceUrl?: string, voiceDuration?: number, messageType?: 'system', senderName?: string) => {
     if (!selectedUserId) return;
-    
+
+    // Generate a unique client ID for deduplication
+    const clientId = `client-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+    const tempId = `temp-${clientId}`;
+
+    // Build optimistic message and add it to the store immediately
+    const optimisticMessage: Message = {
+      id: tempId,
+      senderId: messageType === 'system' ? 'system' : currentUserId,
+      receiverId: selectedUserId,
+      text,
+      fileUrl: fileUrl || null,
+      fileUrls: fileUrls || null,
+      voiceUrl: voiceUrl || null,
+      voiceDuration: voiceDuration || null,
+      timestamp: new Date(),
+      replyTo: replyTo ? {
+        messageId: replyTo.id,
+        text: replyTo.text,
+        senderName: replyTo.senderId === currentUserId ? 'You' : 'Other',
+      } : null,
+      status: 'sending',
+      clientId,
+    };
+
+    useChatStore.getState().addMessage(optimisticMessage);
+
     try {
       // Get expiration setting for this conversation
       const conversation = conversations.find(conv => conv.userId === selectedUserId);
@@ -189,9 +228,7 @@ export const useChat = (
           };
         }
       }
-      
-      console.log(`Sending message to ${selectedUserId} with expiration: ${expirationMinutes} minutes`);
-      
+
       await chatService.sendMessage(
         currentUserId,
         selectedUserId,
@@ -205,12 +242,52 @@ export const useChat = (
         senderName,
         expirationMinutes,
         senderProfile,
-        receiverProfile
+        receiverProfile,
+        clientId
       );
+      // The Firestore subscription will replace the temp message via clientId matching
     } catch (error: unknown) {
+      // Mark the optimistic message as failed
+      useChatStore.getState().updateMessage(tempId, { status: 'failed' });
       setError(error instanceof Error ? error.message : 'An error occurred');
     }
   };
+
+  const retryMessage = useCallback(async (messageId: string) => {
+    const msg = useChatStore.getState().messages.find(m => m.id === messageId);
+    if (!msg || msg.status !== 'failed' || !selectedUserId) return;
+
+    useChatStore.getState().updateMessage(messageId, { status: 'sending' });
+
+    const clientId = msg.clientId || `client-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+
+    try {
+      const conversation = conversations.find(conv => conv.userId === selectedUserId);
+      const expirationMinutes = conversation?.expirationMinutes || null;
+      const receiverProfile = conversation
+        ? { username: conversation.username, email: conversation.email, avatar: conversation.avatar }
+        : undefined;
+
+      await chatService.sendMessage(
+        currentUserId,
+        selectedUserId,
+        msg.text,
+        msg.fileUrl || undefined,
+        msg.fileUrls || undefined,
+        msg.replyTo,
+        msg.voiceUrl || undefined,
+        msg.voiceDuration || undefined,
+        undefined,
+        undefined,
+        expirationMinutes,
+        senderProfile,
+        receiverProfile,
+        clientId
+      );
+    } catch {
+      useChatStore.getState().updateMessage(messageId, { status: 'failed' });
+    }
+  }, [selectedUserId, currentUserId, conversations, senderProfile]);
 
   const editMessage = async (messageId: string, newText: string) => {
     const now = Date.now();
@@ -378,5 +455,6 @@ export const useChat = (
     sendVoiceMessage,
     loadOlderMessages,
     hasMoreMessages,
+    retryMessage,
   };
 };

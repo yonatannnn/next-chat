@@ -12,6 +12,7 @@ interface MessageInputProps {
   onFileUpload: (file: File) => Promise<string>;
   onMultipleFileUpload: (files: File[]) => Promise<string[]>;
   onSendVoiceMessage: (audioBlob: Blob, replyTo?: Message) => void;
+  onTyping?: () => void;
   disabled?: boolean;
   replyingTo?: Message | null;
   onCancelReply?: () => void;
@@ -23,6 +24,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   onFileUpload,
   onMultipleFileUpload,
   onSendVoiceMessage,
+  onTyping,
   disabled = false,
   replyingTo,
   onCancelReply,
@@ -172,7 +174,10 @@ export const MessageInput: React.FC<MessageInputProps> = ({
           <Input
             ref={inputRef}
             value={message}
-            onChange={(e) => setMessage(e.target.value)}
+            onChange={(e) => {
+              setMessage(e.target.value);
+              onTyping?.();
+            }}
             placeholder="Type a message..."
             disabled={disabled}
             className="w-full text-sm md:text-base"

@@ -1,5 +1,6 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import { Virtuoso, VirtuosoHandle } from 'react-virtuoso';
 import { MessageBubble } from './MessageBubble';
 import { MessageInput } from './MessageInput';
 import { Avatar } from '@/components/ui/Avatar';
@@ -21,6 +22,8 @@ import { MessageExpirationInput } from '@/components/ui/MessageExpirationInput';
 import { useRecommendations } from '@/features/profile/hooks/useRecommendations';
 import { conversationSettingsService } from '@/services/conversationSettingsService';
 import { Trash2, Info, Users, Search, X, ChevronUp, ChevronDown, EyeOff, Lock, AlertTriangle, Clock } from 'lucide-react';
+import { MessageSkeleton } from '@/components/ui/Skeleton';
+import { useTypingIndicator } from '@/hooks/useTypingIndicator';
 
 interface ChatWindowProps {
   isMobileSearchOpen?: boolean;
@@ -36,13 +39,14 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   const router = useRouter();
   const { selectedUserId, selectedGroupId, messages, conversations, groupConversations, setSelectedUserId, setSelectedGroupId, replyingTo, setReplyingTo, forwardingMessage, setForwardingMessage, hideConversation, unhideConversation, hardHideConversation, setConversationExpiration, setGroupConversationExpiration } = useChatStore();
   const { userData } = useAuthStore();
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const virtuosoRef = useRef<VirtuosoHandle>(null);
   const { markAsSeen } = useConversations(userData?.id || '');
   const { markGroupAsRead, markGroupAsSeen } = useGroupConversations(
     userData?.id || '',
     { subscribe: false }
   );
   const { recommendations, acceptRecommendation, rejectRecommendation, deleteRecommendation } = useRecommendations(userData?.id || '');
+  const { isOtherUserTyping, handleTyping, clearTyping } = useTypingIndicator(userData?.id, selectedUserId);
   
   // Search functionality
   const [searchQuery, setSearchQuery] = useState('');
@@ -52,13 +56,11 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   const [isChatInfoOpen, setIsChatInfoOpen] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [isAddMembersOpen, setIsAddMembersOpen] = useState(false);
-  const [previousMessageCount, setPreviousMessageCount] = useState(0);
   const [processingRecommendation, setProcessingRecommendation] = useState<string | null>(null);
   const [showHardHideConfirm, setShowHardHideConfirm] = useState(false);
   const [isAtBottom, setIsAtBottom] = useState(true);
   const [isExpirationSelectorOpen, setIsExpirationSelectorOpen] = useState(false);
   const [currentExpiration, setCurrentExpiration] = useState<number | null>(null);
-  const skipNextAutoScrollRef = useRef(false);
 
   // Helper function to format expiration time
   const formatExpirationTime = (minutes: number): string => {
@@ -183,57 +185,9 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     }
   }, [onExpirationDialogTrigger]);
 
-  // Track if user has manually scrolled away from bottom
-  const [userHasScrolledUp, setUserHasScrolledUp] = useState(false);
-  // Track if user is actively scrolling to prevent interference
-  const [isUserActivelyScrolling, setIsUserActivelyScrolling] = useState(false);
   // Track previous chat to only reset scroll when actually switching chats
   const [previousChatId, setPreviousChatId] = useState<string | null>(null);
-
-  // Simple scroll detection - only track if user is at bottom
-  useEffect(() => {
-    const messagesContainer = document.querySelector('.messages-container');
-    if (!messagesContainer) return;
-
-    let scrollTimeout: NodeJS.Timeout;
-
-    const handleScroll = () => {
-      // Mark that user is actively scrolling
-      setIsUserActivelyScrolling(true);
-      clearTimeout(scrollTimeout);
-      
-      const currentScrollTop = messagesContainer.scrollTop;
-      const scrollHeight = messagesContainer.scrollHeight;
-      const clientHeight = messagesContainer.clientHeight;
-      
-      // Check if user is at the bottom (within 5px for more precision)
-      const atBottom = currentScrollTop + clientHeight >= scrollHeight - 5;
-      setIsAtBottom(atBottom);
-      
-      // If user scrolls up from bottom, mark that they've manually scrolled
-      if (!atBottom) {
-        setUserHasScrolledUp(true);
-      } else {
-        // If they scroll back to bottom, reset the flag
-        setUserHasScrolledUp(false);
-      }
-
-      // Reset active scrolling flag after scroll ends
-      scrollTimeout = setTimeout(() => {
-        setIsUserActivelyScrolling(false);
-      }, 150);
-    };
-
-    // Initial check
-    handleScroll();
-
-    messagesContainer.addEventListener('scroll', handleScroll, { passive: true });
-    
-    return () => {
-      messagesContainer.removeEventListener('scroll', handleScroll);
-      clearTimeout(scrollTimeout);
-    };
-  }, []);
+  const [followOutput, setFollowOutput] = useState(true);
 
   // Search functionality
   const handleSearch = (query: string) => {
@@ -252,16 +206,10 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     
     // Scroll to first result if found
     if (filteredMessages.length > 0) {
-      setTimeout(() => {
-        const firstMessage = filteredMessages[0];
-        const messageElement = document.querySelector(`[data-message-id="${firstMessage.id}"]`);
-        if (messageElement) {
-          messageElement.scrollIntoView({ 
-            behavior: 'smooth', 
-            block: 'center' 
-          });
-        }
-      }, 100);
+      const index = messages.findIndex(m => m.id === filteredMessages[0].id);
+      if (index >= 0) {
+        virtuosoRef.current?.scrollToIndex({ index, behavior: 'smooth', align: 'center' });
+      }
     }
   };
 
@@ -278,18 +226,13 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     setCurrentSearchIndex(newIndex);
     
     // Scroll to the current search result
-    setTimeout(() => {
-      const currentMessage = searchResults[newIndex];
-      if (currentMessage) {
-        const messageElement = document.querySelector(`[data-message-id="${currentMessage.id}"]`);
-        if (messageElement) {
-          messageElement.scrollIntoView({ 
-            behavior: 'smooth', 
-            block: 'center' 
-          });
-        }
+    const currentMessage = searchResults[newIndex];
+    if (currentMessage) {
+      const index = messages.findIndex(m => m.id === currentMessage.id);
+      if (index >= 0) {
+        virtuosoRef.current?.scrollToIndex({ index, behavior: 'smooth', align: 'center' });
       }
-    }, 100);
+    }
   };
 
   const closeSearch = () => {
@@ -303,15 +246,10 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     
     // Scroll back to the last viewed search result
     if (currentResult) {
-      setTimeout(() => {
-        const messageElement = document.querySelector(`[data-message-id="${currentResult.id}"]`);
-        if (messageElement) {
-          messageElement.scrollIntoView({ 
-            behavior: 'smooth', 
-            block: 'center' 
-          });
-        }
-      }, 100);
+      const index = messages.findIndex(m => m.id === currentResult.id);
+      if (index >= 0) {
+        virtuosoRef.current?.scrollToIndex({ index, behavior: 'smooth', align: 'center' });
+      }
     }
   };
 
@@ -339,9 +277,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isSearchOpen, searchResults.length, currentSearchIndex]);
-  const [smoothScrollingEnabled, setSmoothScrollingEnabled] = useState(false);
-
-  const { sendMessage, editMessage, deleteMessage, deleteAllMessages, forwardMessage, sendVoiceMessage, loadOlderMessages, hasMoreMessages } = useChat(
+  const { sendMessage, editMessage, deleteMessage, deleteAllMessages, forwardMessage, sendVoiceMessage, loadOlderMessages, hasMoreMessages, retryMessage } = useChat(
     userData?.id || '',
     selectedUserId,
     userData ? { username: userData.username, email: userData.email, avatar: userData.avatar } : undefined
@@ -352,65 +288,22 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   const selectedGroup = groupConversations.find(group => group.groupId === selectedGroupId);
   const isGroupChat = !!selectedGroupId;
 
+  // Reset follow output when switching chats
   useEffect(() => {
-    if (messagesEndRef.current) {
-      // On initial load or when switching chats, scroll instantly to bottom (unless search is active)
-      if (isInitialLoad && !isSearchOpen) {
-        // Use direct scrollTop manipulation for better mobile compatibility
-        const messagesContainer = document.querySelector('.messages-container');
-        if (messagesContainer) {
-          messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        }
-        setIsInitialLoad(false);
-        
-        // After 1 second, enable smooth scrolling for future messages
-        setTimeout(() => {
-          setSmoothScrollingEnabled(true);
-        }, 200);
-      } 
-      // When new messages are added, only auto-scroll if user is at the bottom AND hasn't manually scrolled up AND not actively scrolling
-      else if (messages.length > previousMessageCount && !isSearchOpen) {
-        // Only auto-scroll if user is at the bottom AND hasn't manually scrolled up AND not actively scrolling
-        if (isAtBottom && !userHasScrolledUp && !isUserActivelyScrolling) {
-          // Use direct scrollTop manipulation for better mobile compatibility
-          const messagesContainer = document.querySelector('.messages-container');
-          if (messagesContainer) {
-            if (smoothScrollingEnabled) {
-              messagesContainer.scrollTo({
-                top: messagesContainer.scrollHeight,
-                behavior: 'smooth'
-              });
-            } else {
-              messagesContainer.scrollTop = messagesContainer.scrollHeight;
-            }
-          }
-        }
-      }
-      setPreviousMessageCount(messages.length);
-    }
-  }, [messages, isInitialLoad, previousMessageCount, smoothScrollingEnabled, isSearchOpen, isAtBottom, userHasScrolledUp, isUserActivelyScrolling]);
+    setFollowOutput(true);
+    setIsInitialLoad(true);
+  }, [selectedUserId, selectedGroupId]);
 
   useEffect(() => {
     if (selectedUserId || selectedGroupId) {
       // Get current chat ID
       const currentChatId = selectedUserId || selectedGroupId;
-      
+
       // Only reset scroll state when actually switching to a different chat
       if (currentChatId !== previousChatId) {
-        console.log('Switching to different chat:', currentChatId, 'from:', previousChatId);
-        // Reset initial load state when switching chats
-        setIsInitialLoad(true);
-        setUserHasScrolledUp(false); // Reset scroll flag when switching chats
-        setIsUserActivelyScrolling(false); // Reset active scrolling flag
-        setPreviousMessageCount(0);
-        setSmoothScrollingEnabled(false);
-        
-        // Update previous chat ID
         setPreviousChatId(currentChatId);
-      } else {
-        console.log('Same chat, not resetting scroll state');
       }
-      
+
       // Only mark as seen if there are unread messages
       if (selectedUserId) {
         const conversation = conversations.find(conv => conv.userId === selectedUserId);
@@ -431,44 +324,12 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     }
   }, [selectedUserId, selectedGroupId, previousChatId, conversations, groupConversations, markAsSeen, markGroupAsSeen]);
 
-  // Additional effect to ensure scroll to bottom when switching chats
-  useEffect(() => {
-    if ((selectedUserId || selectedGroupId) && messages.length > 0 && !isSearchOpen) {
-      if (skipNextAutoScrollRef.current) {
-        skipNextAutoScrollRef.current = false;
-        return;
-      }
-      // Small delay to ensure DOM is updated
-      setTimeout(() => {
-        const messagesContainer = document.querySelector('.messages-container');
-        if (messagesContainer) {
-          messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        }
-      }, 100);
-    }
-  }, [selectedUserId, selectedGroupId, messages.length, isSearchOpen]);
-
   const handleLoadOlderMessages = async () => {
-    const messagesContainer = document.querySelector('.messages-container');
-    let previousScrollHeight = 0;
-    let previousScrollTop = 0;
-
-    if (messagesContainer) {
-      previousScrollHeight = messagesContainer.scrollHeight;
-      previousScrollTop = messagesContainer.scrollTop;
-    }
-
-    skipNextAutoScrollRef.current = true;
     await loadOlderMessages();
-
-    if (messagesContainer) {
-      const newScrollHeight = messagesContainer.scrollHeight;
-      const heightDiff = newScrollHeight - previousScrollHeight;
-      messagesContainer.scrollTop = previousScrollTop + heightDiff;
-    }
   };
 
   const handleSendMessage = async (text: string, fileUrl?: string, fileUrls?: string[], replyTo?: any) => {
+    clearTyping();
     if (selectedUserId) {
       await sendMessage(text, fileUrl, fileUrls, replyTo, undefined, undefined, undefined, userData?.username);
     } else if (selectedGroupId) {
@@ -868,89 +729,129 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         </div>
       )}
 
-      {/* Messages - Scrollable */}
-      <div className="messages-container flex-1 overflow-y-auto min-h-0 p-3 md:p-4 space-y-3 md:space-y-4 pt-4 md:pt-4 overflow-x-hidden bg-white dark:bg-gray-900">
-            {selectedUserId && hasMoreMessages && (
-          <div className="flex justify-center">
-            <button
-              onClick={handleLoadOlderMessages}
-              className="text-xs px-3 py-1 rounded-full border border-gray-300 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
-            >
-              Load older messages
-            </button>
-          </div>
+      {/* Messages - Virtualized */}
+      <div className="flex-1 min-h-0 overflow-hidden bg-white dark:bg-gray-900">
+        {messages.length === 0 && isInitialLoad ? (
+          <MessageSkeleton count={7} />
+        ) : (
+          <Virtuoso
+            ref={virtuosoRef}
+            key={selectedUserId || selectedGroupId || 'none'}
+            data={messages}
+            initialTopMostItemIndex={messages.length > 0 ? messages.length - 1 : 0}
+            followOutput={followOutput ? 'smooth' : false}
+            atBottomStateChange={(atBottom) => {
+              setIsAtBottom(atBottom);
+              setFollowOutput(atBottom);
+            }}
+            increaseViewportBy={{ top: 300, bottom: 100 }}
+            className="messages-container"
+            style={{ height: '100%' }}
+            components={{
+              Header: () => (
+                <div className="pt-4 px-3 md:px-4">
+                  {selectedUserId && hasMoreMessages && (
+                    <div className="flex justify-center mb-3">
+                      <button
+                        onClick={handleLoadOlderMessages}
+                        className="text-xs px-3 py-1 rounded-full border border-gray-300 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+                      >
+                        Load older messages
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ),
+              Footer: () => {
+                const filteredRecs = recommendations.filter(rec =>
+                  rec.status === 'pending' && (
+                    (selectedUserId && (rec.senderId === selectedUserId || rec.receiverId === selectedUserId)) ||
+                    (selectedGroupId && (rec.senderId === userData?.id || rec.receiverId === userData?.id))
+                  )
+                );
+                if (filteredRecs.length === 0) return <div className="pb-2" />;
+                return (
+                  <div className="px-3 md:px-4 pb-2 space-y-3">
+                    {filteredRecs.map((recommendation) => {
+                      const isOwn = recommendation.senderId === userData?.id;
+                      return (
+                        <div key={recommendation.id} className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
+                          <ProfileRecommendationBubble
+                            recommendation={recommendation}
+                            isOwn={isOwn}
+                            onAccept={handleAcceptRecommendation}
+                            onReject={handleRejectRecommendation}
+                            onDelete={handleDeleteRecommendation}
+                            isProcessing={processingRecommendation === recommendation.id}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              },
+            }}
+            itemContent={(index, message) => {
+              const isOwn = message.senderId === userData?.id;
+              const isSystem = message.senderId === 'system';
+              let senderName = 'Unknown';
+              let senderAvatar = '';
+
+              if (isSystem) {
+                senderName = 'System';
+                senderAvatar = '';
+              } else if (isOwn) {
+                senderName = userData?.username || 'You';
+                senderAvatar = userData?.avatar || '';
+              } else if (isGroupChat) {
+                senderName = message.senderId;
+                senderAvatar = '';
+              } else {
+                senderName = selectedUser?.username || 'Unknown';
+                senderAvatar = selectedUser?.avatar || '';
+              }
+
+              const isSearchResult = searchResults.some(result => result.id === message.id);
+              const isCurrentSearchResult = searchResults[currentSearchIndex]?.id === message.id;
+
+              return (
+                <div className="px-3 md:px-4 py-1.5 md:py-2">
+                  <MessageBubble
+                    message={message}
+                    isOwn={isOwn}
+                    senderName={senderName}
+                    senderAvatar={senderAvatar}
+                    onEdit={isGroupChat ? editGroupMessage : editMessage}
+                    onDelete={isGroupChat ? deleteGroupMessage : deleteMessage}
+                    onReply={handleReply}
+                    onForward={handleForward}
+                    onRetry={retryMessage}
+                    searchQuery={searchQuery}
+                    isSearchResult={isSearchResult}
+                    isCurrentSearchResult={isCurrentSearchResult}
+                  />
+                </div>
+              );
+            }}
+          />
         )}
-        {/* Messages */}
-        {messages.map((message) => {
-          const isOwn = message.senderId === userData?.id;
-          const isSystem = message.senderId === 'system';
-          let senderName = 'Unknown';
-          let senderAvatar = '';
-          
-          if (isSystem) {
-            senderName = 'System';
-            senderAvatar = '';
-          } else if (isOwn) {
-            senderName = userData?.username || 'You';
-            senderAvatar = userData?.avatar || '';
-          } else if (isGroupChat) {
-            // For group messages, we need to get the sender's name from the message or find it in the group members
-            // For now, we'll use a placeholder - this would need to be enhanced with member data
-            senderName = message.senderId; // This should be replaced with actual sender name lookup
-            senderAvatar = '';
-          } else {
-            senderName = selectedUser?.username || 'Unknown';
-            senderAvatar = selectedUser?.avatar || '';
-          }
-          
-          const isSearchResult = searchResults.some(result => result.id === message.id);
-          const isCurrentSearchResult = searchResults[currentSearchIndex]?.id === message.id;
-          
-          return (
-            <MessageBubble
-              key={message.id}
-              message={message}
-              isOwn={isOwn}
-              senderName={senderName}
-              senderAvatar={senderAvatar}
-              onEdit={isGroupChat ? editGroupMessage : editMessage}
-              onDelete={isGroupChat ? deleteGroupMessage : deleteMessage}
-              onReply={handleReply}
-              onForward={handleForward}
-              searchQuery={searchQuery}
-              isSearchResult={isSearchResult}
-              isCurrentSearchResult={isCurrentSearchResult}
-            />
-          );
-        })}
-        
-        {/* Profile Recommendations - Show only pending recommendations */}
-        {recommendations
-          .filter(rec => 
-            rec.status === 'pending' && (
-              // For individual chats
-              (selectedUserId && (rec.senderId === selectedUserId || rec.receiverId === selectedUserId)) ||
-              // For group chats - show recommendations where current user is sender or receiver
-              (selectedGroupId && (rec.senderId === userData?.id || rec.receiverId === userData?.id))
-            )
-          )
-          .map((recommendation) => {
-            const isOwn = recommendation.senderId === userData?.id;
-            return (
-              <div key={recommendation.id} className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
-                <ProfileRecommendationBubble
-                  recommendation={recommendation}
-                  isOwn={isOwn}
-                  onAccept={handleAcceptRecommendation}
-                  onReject={handleRejectRecommendation}
-                  onDelete={handleDeleteRecommendation}
-                  isProcessing={processingRecommendation === recommendation.id}
-                />
-              </div>
-            );
-          })}
-        <div ref={messagesEndRef} />
       </div>
+
+      {/* Typing indicator */}
+      {isOtherUserTyping && !isGroupChat && (
+        <div className="flex-shrink-0 px-4 py-1">
+          <div className="flex items-center space-x-2">
+            <div className="flex space-x-1">
+              <span className="w-1.5 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+              <span className="w-1.5 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+              <span className="w-1.5 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+            </div>
+            <span className="text-xs text-gray-500 dark:text-gray-400">
+              {selectedUser?.username || 'User'} is typing...
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Message Input - Fixed */}
       <div className="flex-shrink-0">
@@ -959,6 +860,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           onFileUpload={handleFileUpload}
           onMultipleFileUpload={handleMultipleFileUpload}
           onSendVoiceMessage={handleSendVoiceMessage}
+          onTyping={handleTyping}
           disabled={false}
           replyingTo={replyingTo}
           onCancelReply={handleCancelReply}

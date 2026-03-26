@@ -1,10 +1,16 @@
-<svg width="384" height="384" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Message icon dotted outline">
-  <rect x="24" y="24" width="464" height="464" rx="110" fill="#2563EB"/>
-  <path d="M186 122H326C358 122 384 148 384 180V268C384 300 358 326 326 326H248L188 382V326H186C154 326 128 300 128 268V180C128 148 154 122 186 122Z"
-    fill="none"
-    stroke="#FFFFFF"
-    stroke-width="20"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-    stroke-dasharray="1 26"/>
+<svg width="384" height="384" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Next Chat icon">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#3B82F6"/>
+      <stop offset="100%" stop-color="#1D4ED8"/>
+    </linearGradient>
+  </defs>
+  <rect x="24" y="24" width="464" height="464" rx="110" fill="url(#bg)"/>
+  <path d="M310 140H200C172 140 150 162 150 190V260C150 288 172 310 200 310H210V348L258 310H310C338 310 360 288 360 260V190C360 162 338 140 310 140Z"
+    fill="rgba(255,255,255,0.35)"/>
+  <path d="M316 190H206C178 190 156 212 156 240V310C156 338 178 360 206 360H254L302 398V360H316C344 360 366 338 366 310V240C366 212 344 190 316 190Z"
+    fill="#FFFFFF"/>
+  <circle cx="228" cy="275" r="14" fill="#3B82F6"/>
+  <circle cx="261" cy="275" r="14" fill="#3B82F6"/>
+  <circle cx="294" cy="275" r="14" fill="#3B82F6"/>
 </svg>

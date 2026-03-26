@@ -4,7 +4,7 @@ import { Avatar } from '@/components/ui/Avatar';
 import { ImageViewer } from '@/components/ui/ImageViewer';
 import { LinkifiedText } from '@/components/ui/LinkifiedText';
 import { Message } from '@/features/chat/store/chatStore';
-import { Edit2, Trash2, Check, X, Reply, Forward, Play, Pause, Volume2, Clock, Shield } from 'lucide-react';
+import { Edit2, Trash2, Check, X, Reply, Forward, Play, Pause, Volume2, Clock, Shield, Loader2, AlertCircle, RotateCcw } from 'lucide-react';
 
 interface MessageBubbleProps {
   message: Message;
@@ -15,6 +15,7 @@ interface MessageBubbleProps {
   onDelete?: (messageId: string) => void;
   onReply?: (message: Message) => void;
   onForward?: (message: Message) => void;
+  onRetry?: (messageId: string) => void;
   searchQuery?: string;
   isSearchResult?: boolean;
   isCurrentSearchResult?: boolean;
@@ -29,6 +30,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   onDelete,
   onReply,
   onForward,
+  onRetry,
   searchQuery,
   isSearchResult,
   isCurrentSearchResult,
@@ -485,12 +487,25 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                 </span>
               </div>
             )}
-            {isOwn && message.seen && (
+            {isOwn && message.status === 'sending' && (
+              <Loader2 size={12} className="text-gray-400 animate-spin" />
+            )}
+            {isOwn && message.status === 'failed' && (
+              <button
+                onClick={() => onRetry?.(message.id)}
+                className="flex items-center space-x-1 text-red-500 hover:text-red-600"
+                title="Tap to retry"
+              >
+                <AlertCircle size={12} />
+                <RotateCcw size={10} />
+              </button>
+            )}
+            {isOwn && message.status !== 'sending' && message.status !== 'failed' && message.seen && (
               <span className="text-xs text-blue-500" title={`Seen at ${message.seenAt ? formatTime(message.seenAt) : 'Unknown time'}`}>
                 ✓✓
               </span>
             )}
-            {isOwn && !message.seen && (
+            {isOwn && message.status !== 'sending' && message.status !== 'failed' && !message.seen && (
               <span className="text-xs text-gray-400">
                 ✓
               </span>
