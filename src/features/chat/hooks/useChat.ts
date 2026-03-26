@@ -151,6 +151,14 @@ export const useChat = (
         lastCursorRef.current = cursor;
         setHasMoreMessages(hasMore);
         setLoading(false);
+
+        // Mark unseen messages from the other user as seen
+        const unseenFromOther = newMessages.filter(
+          (m) => m.senderId === selectedUserId && !m.seen && m.id && !m.id.startsWith('temp-')
+        );
+        for (const msg of unseenFromOther) {
+          chatService.markMessageAsSeen(msg.id).catch(() => {});
+        }
       },
       { limit: 50 }
     );
