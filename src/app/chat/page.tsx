@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { ChatWindow } from '@/components/layout/ChatWindow';
 import { useAuth } from '@/features/auth/hooks/useAuth';
+import { useAuthStore } from '@/features/auth/store/authStore';
 import { useUsers } from '@/features/users/hooks/useUsers';
 import { useChatStore } from '@/features/chat/store/chatStore';
 import { useChat } from '@/features/chat/hooks/useChat';
@@ -33,6 +34,7 @@ function ChatPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, userData, isLoading } = useAuth();
+  const isOptimistic = useAuthStore((s) => s.isOptimistic);
   const { users } = useUsers(userData?.id || '');
   const { selectedUserId, selectedGroupId, conversations, groupConversations, setSelectedUserId, setSelectedGroupId, hideConversation, hardHideConversation, addConversation } = useChatStore();
   const { messages } = useChat(
@@ -95,11 +97,12 @@ function ChatPageContent() {
   };
 
   useEffect(() => {
+    // Don't redirect while optimistic — wait for Firebase to confirm/deny
+    if (isOptimistic) return;
     if (!isLoading && !user) {
-      console.log('Redirecting to login - user:', user, 'isLoading:', isLoading);
       router.push('/login');
     }
-  }, [user, isLoading, router]);
+  }, [user, isLoading, isOptimistic, router]);
 
   useEffect(() => {
     if (!requestedUserId || !userData?.id) return;
