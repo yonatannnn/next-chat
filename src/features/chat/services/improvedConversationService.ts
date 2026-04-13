@@ -1,10 +1,12 @@
-import { 
-  collection, 
-  query, 
-  where, 
-  orderBy, 
+import {
+  collection,
+  query,
+  where,
+  orderBy,
   onSnapshot,
   getDocs,
+  getDoc,
+  doc,
   limit,
   DocumentData,
   QuerySnapshot
@@ -73,25 +75,94 @@ export const improvedConversationService = {
       }).filter(Boolean) as Conversation[];
     };
 
+    // Cache of fresh user profiles fetched from the users collection
+    let freshProfilesCache: Map<string, { username: string; email: string; avatar?: string }> | null = null;
+
+    const fetchFreshProfiles = async (peerIds: string[]): Promise<Map<string, { username: string; email: string; avatar?: string }>> => {
+      const profiles = new Map<string, { username: string; email: string; avatar?: string }>();
+      const fetches = peerIds.map(async (peerId) => {
+        try {
+          const userDoc = await getDoc(doc(db!, 'users', peerId));
+          if (userDoc.exists()) {
+            const data = userDoc.data();
+            profiles.set(peerId, {
+              username: data.username || 'Unknown',
+              email: data.email || '',
+              avatar: data.avatar || undefined,
+            });
+          }
+        } catch {
+          // Ignore individual fetch failures, cached profile will be used
+        }
+      });
+      await Promise.all(fetches);
+      return profiles;
+    };
+
+    const applyFreshProfiles = (conversations: Conversation[], freshProfiles: Map<string, { username: string; email: string; avatar?: string }>): Conversation[] => {
+      return conversations.map((conv) => {
+        const fresh = freshProfiles.get(conv.userId);
+        if (!fresh) return conv;
+        return {
+          ...conv,
+          username: fresh.username,
+          email: fresh.email,
+          avatar: fresh.avatar,
+        };
+      });
+    };
+
     const mapSnapshot = async (snapshot: QuerySnapshot<DocumentData>) => {
       const snapshotVersion = ++lastSnapshotVersion;
 
-      // Render immediately with whatever we have in cache (or without settings).
-      const baseConversations = buildConversations(snapshot, settingsMapCache || undefined);
-      callback(baseConversations);
+      // Render immediately with cached profiles from the conversation document.
+      let conversations = buildConversations(snapshot, settingsMapCache || undefined);
 
-      // Hydrate expiration settings in the background without blocking initial render.
-      if (!settingsMapCache) {
-        getSettingsMap()
-          .then((settingsMap) => {
+      // If we already have fresh profiles from a previous snapshot, apply them right away.
+      if (freshProfilesCache) {
+        conversations = applyFreshProfiles(conversations, freshProfilesCache);
+      }
+      callback(conversations);
+
+      // Collect peer IDs to fetch fresh profiles from the users collection.
+      const peerIds = conversations.map((c) => c.userId);
+
+      // Hydrate fresh profiles and expiration settings in the background.
+      const promises: Promise<void>[] = [];
+
+      promises.push(
+        fetchFreshProfiles(peerIds)
+          .then((freshProfiles) => {
             if (snapshotVersion !== lastSnapshotVersion) return;
-            const hydrated = buildConversations(snapshot, settingsMap);
-            callback(hydrated);
+            freshProfilesCache = freshProfiles;
           })
           .catch((error) => {
-            console.error('Error loading conversation settings:', error);
-          });
+            console.error('Error fetching fresh user profiles:', error);
+          })
+      );
+
+      if (!settingsMapCache) {
+        promises.push(
+          getSettingsMap()
+            .then(() => {
+              // settings are now in settingsMapCache
+            })
+            .catch((error) => {
+              console.error('Error loading conversation settings:', error);
+            })
+        );
       }
+
+      await Promise.all(promises);
+
+      if (snapshotVersion !== lastSnapshotVersion) return;
+
+      // Re-build with fresh data and emit updated conversations.
+      let hydrated = buildConversations(snapshot, settingsMapCache || undefined);
+      if (freshProfilesCache) {
+        hydrated = applyFreshProfiles(hydrated, freshProfilesCache);
+      }
+      callback(hydrated);
     };
 
     return onSnapshot(q, (snapshot) => {

@@ -24,8 +24,17 @@ const initializeAuthListener = () => {
       try {
         const currentUserData = useAuthStore.getState().userData;
         if (currentUserData?.id === firebaseUser.uid) {
-          // Cached data matches — just confirm and stop loading
+          // Cached data matches — stop loading immediately (optimistic)
           useAuthStore.setState({ isOptimistic: false, isLoading: false });
+
+          // Still fetch fresh data in background to pick up profile changes
+          authService.getUserData(firebaseUser.uid).then((freshData) => {
+            if (freshData) {
+              setUserData(freshData);
+            }
+          }).catch(() => {
+            // Ignore — cached data is good enough
+          });
           return;
         }
 
